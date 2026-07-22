@@ -1,0 +1,74 @@
+@import 'tailwindcss';
+
+/*
+ * Umai design tokens.
+ *
+ * Direction: green, natural, soft, cozy. Generous radii, low-contrast warm
+ * neutrals, and shadows that read as "soft light" rather than elevation.
+ * Everything here is exposed as Tailwind utilities (bg-leaf-500, rounded-cozy,
+ * shadow-soft, ...) so components stay declarative.
+ */
+@theme {
+  /* Primary green — leaves, matcha, herbs. */
+  --color-leaf-50: #f2f9f1;
+  --color-leaf-100: #e1f1de;
+  --color-leaf-200: #c4e3bf;
+  --color-leaf-300: #9bcf94;
+  --color-leaf-400: #6eb565;
+  --color-leaf-500: #4c9a45;
+  --color-leaf-600: #3a7c36;
+  --color-leaf-700: #30622e;
+  --color-leaf-800: #2a4e29;
+  --color-leaf-900: #234123;
+
+  /* Warm neutrals — paper, cream, soft bark. */
+  --color-cream-50: #fdfcf7;
+  --color-cream-100: #f8f5ec;
+  --color-cream-200: #efe9da;
+  --color-cream-300: #e0d7c2;
+  --color-bark-400: #a89e8c;
+  --color-bark-600: #6b6355;
+  --color-bark-800: #3d382f;
+
+  /* Accents for tags and highlights. */
+  --color-apricot-300: #f8c98f;
+  --color-apricot-500: #ec9a3c;
+  --color-berry-500: #c4577a;
+
+  /* Rounded, fluffy geometry. */
+  --radius-cozy: 1.25rem;
+  --radius-pill: 9999px;
+
+  /* Soft, diffuse shadows — never harsh. */
+  --shadow-soft: 0 2px 8px rgb(61 56 47 / 0.06), 0 8px 24px rgb(61 56 47 / 0.06);
+  --shadow-lifted: 0 4px 12px rgb(61 56 47 / 0.08), 0 16px 36px rgb(61 56 47 / 0.1);
+
+  /* Japanese-first system font stack; no webfont download required. */
+  --font-sans:
+    'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', 'Yu Gothic UI',
+    Meiryo, system-ui, sans-serif;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-cream-50 text-bark-800 font-sans antialiased;
+    /* Japanese text needs a little more line height to stay comfortable. */
+    line-height: 1.8;
+  }
+
+  /* Respect users who prefer reduced motion — animation is decorative here. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}

@@ -1,0 +1,25 @@
+# Environment / secrets — never commit real values
+.env
+.env.*
+!.env.example
+
+# Java / Maven
+target/
+*.jar
+*.class
+
+# Node
+node_modules/
+dist/
+*.local
+
+# Editors & OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*

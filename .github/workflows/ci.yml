@@ -1,0 +1,95 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+# A newer push supersedes an in-flight run on the same branch.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (Java 21 + PostGIS)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+          cache: maven
+
+      # Docker is available on ubuntu-latest, so the Testcontainers integration
+      # tests actually run here. They are skipped on machines without it, which is
+      # why this job is the real verification of the database layer.
+      - name: Run tests
+        working-directory: UmaiBackend
+        run: ./mvnw -B test
+
+      # Skipped tests still pass the build, so a run where the container failed to
+      # start would look green. This fails the job instead.
+      - name: Fail if database tests were skipped
+        working-directory: UmaiBackend
+        run: |
+          skipped=$(grep -rhoP 'skipped="\K\d+' target/surefire-reports/*.xml \
+            | awk '{total += $1} END {print total+0}')
+          echo "Skipped tests: $skipped"
+          if [ "$skipped" -ne 0 ]; then
+            echo "::error::$skipped test(s) were skipped. Integration tests must run in CI."
+            exit 1
+          fi
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-surefire-reports
+          path: UmaiBackend/target/surefire-reports/
+          retention-days: 7
+
+      - name: Verify the application packages
+        working-directory: UmaiBackend
+        run: ./mvnw -B -DskipTests package
+
+  frontend:
+    name: Frontend (Node 22)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: UmaiFrontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: UmaiFrontend/package-lock.json
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      # Also type-checks: the build script runs `tsc -b` first.
+      - run: npm run build
+
+  docker:
+    name: Docker Compose builds
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Catches Dockerfile and compose regressions without needing a deployment.
+      - name: Validate compose configuration
+        env:
+          POSTGRES_PASSWORD: ci-password
+          JWT_SECRET: ci-only-secret-value-long-enough-for-hs256-signing
+        run: docker compose config --quiet
+
+      - name: Build backend image
+        run: docker build -t umai-backend:ci ./UmaiBackend

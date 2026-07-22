@@ -1,0 +1,81 @@
+spring:
+  application:
+    name: umai-backend
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/umai}
+    username: ${DB_USERNAME:umai}
+    password: ${DB_PASSWORD:umai}
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      # Schema is owned by Flyway migrations, never by Hibernate.
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+
+  flyway:
+    enabled: true
+    # Development default includes db/seed so the app has browsable data immediately.
+    # Production MUST set FLYWAY_LOCATIONS=classpath:db/migration to exclude the
+    # fictional seed restaurants.
+    locations: ${FLYWAY_LOCATIONS:classpath:db/migration,classpath:db/seed}
+
+server:
+  port: ${SERVER_PORT:8080}
+  error:
+    # Never leak stack traces or internal messages to API clients.
+    include-message: never
+    include-stacktrace: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never
+
+umai:
+  cors:
+    # Comma-separated list of origins allowed to call the API.
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+
+  rate-limit:
+    enabled: ${RATE_LIMIT_ENABLED:true}
+    # Login/registration attempts per period, per client address.
+    auth-attempts: ${RATE_LIMIT_AUTH_ATTEMPTS:10}
+    # Other write requests (reviews, submissions) per period.
+    write-requests: ${RATE_LIMIT_WRITE_REQUESTS:60}
+    period: ${RATE_LIMIT_PERIOD:1m}
+
+  security:
+    # Comma-separated emails promoted to ADMIN at startup. The accounts must already
+    # be registered; this never creates users or sets passwords.
+    admin-emails: ${UMAI_ADMIN_EMAILS:}
+
+    jwt:
+      # No default: a committed signing key would be public. Startup fails without it.
+      # Generate one with: openssl rand -base64 48
+      secret: ${JWT_SECRET:}
+      expires-in: ${JWT_EXPIRES_IN:12h}
+
+  overpass:
+    # Only contacted by an explicit admin-triggered import, never during browsing.
+    endpoint: ${OVERPASS_ENDPOINT:https://overpass-api.de/api/interpreter}
+    timeout: ${OVERPASS_TIMEOUT:90s}
+    user-agent: ${OVERPASS_USER_AGENT:Umai/1.0 (Tokyo vegetarian restaurant finder)}
+    max-elements: ${OVERPASS_MAX_ELEMENTS:500}
+
+  submissions:
+    # MVP: user submissions go live immediately. Set to false to route them to
+    # PENDING instead, once a moderation queue exists.
+    auto-publish: ${SUBMISSIONS_AUTO_PUBLISH:true}
+
+logging:
+  level:
+    com.umai.backend: ${LOG_LEVEL:INFO}
