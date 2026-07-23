@@ -1,5 +1,5 @@
 import { Suspense, lazy } from 'react'
-import { BrowserRouter, Outlet, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom'
 
 import { AuthProvider } from './auth/AuthContext'
 import { RequireAuth } from './auth/RequireAuth'
@@ -8,18 +8,13 @@ import { LoadingState } from './components/ui/States'
 import { HomePage } from './pages/HomePage'
 
 /*
- * Routes are loaded on demand so a first visit does not pay for screens it may never
- * open. The map matters most: Leaflet and its CSS are a large share of the bundle and
- * are only needed on /map and the detail page's mini map.
+ * The map-first HomePage is the whole browse experience — map, list and filters on one
+ * screen — so it is imported eagerly (it is the landing, and it needs Leaflet anyway).
+ * The old /map, /search and /categories screens were folded into it and now redirect.
  *
- * HomePage is imported eagerly — it is the most common entry point, and lazy-loading
- * it would only add a spinner before the first paint.
+ * Everything else is loaded on demand so a first visit does not pay for screens it may
+ * never open.
  */
-const MapPage = lazy(() => import('./pages/MapPage').then((m) => ({ default: m.MapPage })))
-const SearchPage = lazy(() => import('./pages/SearchPage').then((m) => ({ default: m.SearchPage })))
-const CategoriesPage = lazy(() =>
-  import('./pages/CategoriesPage').then((m) => ({ default: m.CategoriesPage })),
-)
 const RestaurantDetailPage = lazy(() =>
   import('./pages/RestaurantDetailPage').then((m) => ({ default: m.RestaurantDetailPage })),
 )
@@ -51,9 +46,10 @@ function App() {
           <Route element={<AppLayout />}>
             <Route element={<LazyRoutes />}>
               <Route path="/" element={<HomePage />} />
-              <Route path="/map" element={<MapPage />} />
-              <Route path="/search" element={<SearchPage />} />
-              <Route path="/categories" element={<CategoriesPage />} />
+              {/* Folded into the map-first home. Redirect old links rather than 404. */}
+              <Route path="/map" element={<Navigate to="/" replace />} />
+              <Route path="/search" element={<Navigate to="/" replace />} />
+              <Route path="/categories" element={<Navigate to="/" replace />} />
               <Route path="/restaurants/:id" element={<RestaurantDetailPage />} />
               <Route path="/login" element={<LoginPage />} />
 

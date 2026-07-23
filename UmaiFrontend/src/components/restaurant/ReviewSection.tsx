@@ -60,7 +60,7 @@ export function ReviewSection({ restaurantId, onChanged }: ReviewSectionProps) {
 
   return (
     <section className="mt-8" aria-labelledby="reviews-heading">
-      <h2 id="reviews-heading" className="font-display text-xl text-bark-800">
+      <h2 id="reviews-heading" className="text-xl font-semibold text-bark-800">
         レビュー
         {data && data.totalElements > 0 && (
           <span className="ml-2 text-sm font-normal text-bark-400">{data.totalElements}件</span>
@@ -307,7 +307,7 @@ function ReviewForm({ restaurantId, existingReview, onChanged }: ReviewFormProps
         <button
           type="submit"
           disabled={submitting}
-          className="sketchy-edge font-display cursor-pointer rounded-pill bg-leaf-500 px-6 py-2.5 text-white shadow-soft transition-colors hover:bg-leaf-600 disabled:cursor-not-allowed disabled:opacity-60"
+          className="cursor-pointer rounded-pill bg-leaf-500 px-6 py-2.5 text-white shadow-soft transition-colors hover:bg-leaf-600 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {submitting ? '送信中…' : existingReview ? '更新する' : '投稿する'}
         </button>

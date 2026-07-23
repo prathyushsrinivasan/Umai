@@ -71,6 +71,14 @@ umai:
     user-agent: ${OVERPASS_USER_AGENT:Umai/1.0 (Tokyo vegetarian restaurant finder)}
     max-elements: ${OVERPASS_MAX_ELEMENTS:500}
 
+  foursquare:
+    # Real restaurant photos, backfilled by an admin action. Disabled until an API key
+    # is set — the app runs fine without it and shows the generated fallback cover.
+    api-key: ${FOURSQUARE_API_KEY:}
+    endpoint: ${FOURSQUARE_ENDPOINT:https://api.foursquare.com/v3}
+    match-radius-meters: ${FOURSQUARE_MATCH_RADIUS:150}
+    timeout: ${FOURSQUARE_TIMEOUT:10s}
+
   submissions:
     # MVP: user submissions go live immediately. Set to false to route them to
     # PENDING instead, once a moderation queue exists.

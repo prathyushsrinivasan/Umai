@@ -304,4 +304,52 @@ class OsmTagMapperTests {
 		}
 	}
 
+	@Nested
+	@DisplayName("image")
+	class Image {
+
+		@ParameterizedTest(name = "{0} is accepted verbatim")
+		@ValueSource(strings = { "https://example.com/photo.jpg", "http://example.com/p.png?w=1" })
+		void directHttpImagesAreAccepted(String url) {
+			assertThat(map(Map.of("name", "店", "image", url)).imageUrl()).isEqualTo(url);
+		}
+
+		@ParameterizedTest(name = "{0} is rejected")
+		@ValueSource(strings = { "javascript:alert(1)", "example.com/x.jpg", "ftp://example.com/x.jpg" })
+		void nonHttpImagesAreRejected(String url) {
+			// A hostile tag value must never become an <img src> the frontend renders.
+			assertThat(map(Map.of("name", "店", "image", url)).imageUrl()).isNull();
+		}
+
+		@Test
+		@DisplayName("a wikimedia_commons File: reference becomes a Special:FilePath thumbnail")
+		void commonsFileBecomesThumbnail() {
+			assertThat(map(Map.of("name", "店", "wikimedia_commons", "File:Green Cafe.jpg")).imageUrl())
+				.isEqualTo("https://commons.wikimedia.org/wiki/Special:FilePath/Green_Cafe.jpg?width=800");
+		}
+
+		@Test
+		@DisplayName("a Category: commons reference is skipped — it is a gallery, not one photo")
+		void commonsCategoryIsSkipped() {
+			assertThat(map(Map.of("name", "店", "wikimedia_commons", "Category:Restaurants")).imageUrl())
+				.isNull();
+		}
+
+		@Test
+		@DisplayName("a direct image tag wins over a commons reference")
+		void directImageWinsOverCommons() {
+			assertThat(map(Map.of(
+				"name", "店",
+				"image", "https://example.com/photo.jpg",
+				"wikimedia_commons", "File:Other.jpg")).imageUrl())
+				.isEqualTo("https://example.com/photo.jpg");
+		}
+
+		@Test
+		@DisplayName("no image tags yields null rather than a placeholder")
+		void missingImageIsNull() {
+			assertThat(map(Map.of("name", "店")).imageUrl()).isNull();
+		}
+	}
+
 }

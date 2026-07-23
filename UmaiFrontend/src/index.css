@@ -79,40 +79,28 @@
   }
 }
 
+/*
+ * Hand-drawn character, take two.
+ *
+ * The old approach warped text with an SVG displacement filter and was illegible.
+ * These utilities bring back the "crayon" feel a different way — irregular corner
+ * radii — so the *edges* look drawn by hand while the content inside stays perfectly
+ * crisp. Two variants, alternated across a grid, stop every card looking identical.
+ * Pair with a warm 2px border for the crayon-outline look.
+ */
 @layer utilities {
-  /* Hand-drawn wobble for card/panel surfaces. Applied only to `.rounded-cozy`
-     (cards) and not `.rounded-pill` (chips/badges) — at pill sizes the
-     displacement either does nothing visible or garbles small text, and pills
-     appear in the highest simultaneous counts (filter chip grids), which is
-     where the render cost would actually bite. References the filter defined
-     once in <SketchyDefs>. */
-  .rounded-cozy {
-    filter: url(#sketchy-edge);
+  .hand-drawn {
+    border-radius: 16px 22px 15px 24px / 22px 15px 24px 16px;
   }
 
-  /* Opt-in for the handful of pill-shaped elements (primary CTAs) that want
-     the same treatment, without broadening the blanket rule above. */
-  .sketchy-edge {
-    filter: url(#sketchy-edge);
+  .hand-drawn-alt {
+    border-radius: 24px 15px 22px 16px / 15px 24px 16px 22px;
   }
 
-  /* Bolder wobble for sparse, large-text display cards — must come after
-     `.rounded-cozy` above so it wins when both classes are present. */
-  .sketchy-edge-strong {
-    filter: url(#sketchy-edge-strong);
-  }
-
-  /* Opt-out for surfaces where distorting the content itself would hurt
-     usability rather than add charm (e.g. the Leaflet map tiles) — must come
-     after `.rounded-cozy` above so it wins when both classes are present. */
-  .no-sketch {
-    filter: none;
-  }
-
-  /* Bolder, crayon-weight outlines on every card and pill — adds to
-     whatever border color/width utility a component already applies. */
-  .rounded-cozy,
-  .rounded-pill {
+  /* Warm, slightly heavier outline that reads as a crayon line rather than a hairline
+     UI border. Opt-in, so dense/utilitarian surfaces can stay crisp. */
+  .crayon-border {
     border-width: 2px;
+    border-color: var(--color-bark-400);
   }
 }

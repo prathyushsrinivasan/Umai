@@ -154,6 +154,9 @@ public class RestaurantImportService {
 		if (external.description() != null) {
 			restaurant.setDescription(external.description());
 		}
+		if (external.imageUrl() != null) {
+			restaurant.setImageUrl(external.imageUrl());
+		}
 		if (external.priceRange() != null) {
 			restaurant.setPriceRange(external.priceRange());
 		}

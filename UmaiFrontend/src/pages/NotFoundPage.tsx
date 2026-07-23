@@ -1,11 +1,11 @@
 import { Link } from 'react-router-dom'
 
+import { Icon } from '../components/ui/Icon'
+
 export function NotFoundPage() {
   return (
     <div className="mx-auto max-w-xl px-5 py-24 text-center">
-      <p aria-hidden="true" className="text-4xl">
-        🌱
-      </p>
+      <Icon name="sprout" className="mx-auto size-10 text-leaf-400" />
       <h1 className="font-display mt-4 text-2xl text-bark-800">
         ページが見つかりませんでした
       </h1>

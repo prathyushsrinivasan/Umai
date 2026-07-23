@@ -36,6 +36,11 @@ public interface RestaurantRepository extends JpaRepository<Restaurant, Long>, J
 
 	Optional<Restaurant> findByIdAndStatus(Long id, RestaurantStatus status);
 
+	/** Published restaurants that still have no photo — the targets for photo backfill. */
+	Page<Restaurant> findByStatusAndImageUrlIsNull(RestaurantStatus status, Pageable pageable);
+
+	long countByStatusAndImageUrlIsNull(RestaurantStatus status);
+
 	/** Used on re-import to update an existing record rather than duplicate it. */
 	Optional<Restaurant> findBySourceAndSourceExternalId(RestaurantSource source, String sourceExternalId);
 

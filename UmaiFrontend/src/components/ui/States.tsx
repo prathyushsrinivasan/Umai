@@ -4,6 +4,7 @@
  * Every screen that fetches data renders all three, so a failure or an empty result
  * is always explained rather than shown as a blank area.
  */
+import { Icon } from './Icon'
 
 interface LoadingStateProps {
   label?: string
@@ -51,9 +52,7 @@ export function ErrorState({
 }: ErrorStateProps) {
   return (
     <div role="alert" className="rounded-cozy border border-apricot-300 bg-apricot-300/15 p-8 text-center">
-      <p aria-hidden="true" className="text-3xl">
-        🍂
-      </p>
+      <Icon name="sprout" className="mx-auto size-8 text-apricot-500" />
       <p className="mt-3 text-bark-800">{message}</p>
       {onRetry && (
         <button
@@ -81,9 +80,7 @@ export function EmptyState({
 }: EmptyStateProps) {
   return (
     <div className="rounded-cozy border border-cream-200 bg-white p-12 text-center shadow-soft">
-      <p aria-hidden="true" className="text-4xl">
-        🌱
-      </p>
+      <Icon name="sprout" className="mx-auto size-10 text-leaf-400" />
       <h2 className="mt-4 font-bold text-bark-800">{title}</h2>
       <p className="mt-2 text-sm text-bark-600">{description}</p>
       {children && <div className="mt-6">{children}</div>}

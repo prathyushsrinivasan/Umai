@@ -282,7 +282,7 @@ export function SubmitRestaurantPage() {
         <button
           type="submit"
           disabled={submitting}
-          className="sketchy-edge font-display w-full cursor-pointer rounded-pill bg-leaf-500 py-3.5 text-lg text-white shadow-soft transition-colors hover:bg-leaf-600 disabled:cursor-not-allowed disabled:opacity-60"
+          className="w-full cursor-pointer rounded-pill bg-leaf-500 py-3.5 text-lg text-white shadow-soft transition-colors hover:bg-leaf-600 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {submitting ? '送信中…' : 'このお店を登録する'}
         </button>
@@ -302,7 +302,7 @@ function Required() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="space-y-4 rounded-cozy border border-cream-200 bg-white p-6 shadow-soft">
-      <h2 className="font-display text-lg text-bark-800">{title}</h2>
+      <h2 className="text-lg font-semibold text-bark-800">{title}</h2>
       {children}
     </section>
   )

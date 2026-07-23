@@ -22,6 +22,7 @@ import com.umai.backend.restaurant.VegetarianType;
  * @param latitude         WGS84 latitude
  * @param longitude        WGS84 longitude
  * @param vegetarianType   normalised diet classification; UNKNOWN when unclear
+ * @param imageUrl         an http(s) photo URL when the source has one, else null
  * @param categorySlugs    cuisine genres matched to our category table
  */
 public record ExternalRestaurant(
@@ -36,6 +37,7 @@ public record ExternalRestaurant(
 		String websiteUrl,
 		String phone,
 		String openingHours,
+		String imageUrl,
 		PriceRange priceRange,
 		List<String> categorySlugs) {
 

@@ -5,6 +5,7 @@ import { useEffect } from 'react'
 
 import { NAV_ITEMS } from '../../lib/navigation'
 import { useAuth } from '../../auth/useAuth'
+import { Icon } from '../ui/Icon'
 
 /**
  * Site header with responsive navigation: inline links on desktop, a disclosure
@@ -40,7 +41,7 @@ export function SiteHeader() {
                 }`
               }
             >
-              <span aria-hidden="true">{item.icon}</span>
+              <Icon name={item.icon} className="size-4" />
               {item.label}
             </NavLink>
           ))}
@@ -121,9 +122,9 @@ export function SiteHeader() {
             <ul className="mx-auto max-w-6xl px-5 py-3">
               {[
                 ...NAV_ITEMS,
-                { to: '/restaurants/new', label: 'レストラン追加', icon: '✏️' },
+                { to: '/restaurants/new', label: 'レストラン追加', icon: 'plus' as const },
                 // Signed-in users get a logout action instead of a login link.
-                ...(user ? [] : [{ to: '/login', label: 'ログイン', icon: '👤' }]),
+                ...(user ? [] : [{ to: '/login', label: 'ログイン', icon: 'person' as const }]),
               ].map((item) => (
                 <li key={item.to}>
                   <NavLink
@@ -134,7 +135,7 @@ export function SiteHeader() {
                       }`
                     }
                   >
-                    <span aria-hidden="true">{item.icon}</span>
+                    <Icon name={item.icon} className="size-4.5" />
                     {item.label}
                   </NavLink>
                 </li>
@@ -147,7 +148,7 @@ export function SiteHeader() {
                     onClick={logout}
                     className="flex w-full cursor-pointer items-center gap-3 rounded-cozy px-3 py-3 text-left text-bark-600 transition-colors hover:bg-cream-100"
                   >
-                    <span aria-hidden="true">👤</span>
+                    <Icon name="logout" className="size-4.5" />
                     {user.username} — ログアウト
                   </button>
                 </li>

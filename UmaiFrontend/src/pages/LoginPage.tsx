@@ -142,7 +142,7 @@ export function LoginPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="sketchy-edge font-display w-full cursor-pointer rounded-pill bg-leaf-500 py-3 text-lg text-white shadow-soft transition-colors hover:bg-leaf-600 disabled:cursor-not-allowed disabled:opacity-60"
+            className="w-full cursor-pointer rounded-pill bg-leaf-500 py-3 text-lg text-white shadow-soft transition-colors hover:bg-leaf-600 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {submitting ? '送信中…' : mode === 'login' ? 'ログイン' : 'アカウントを作成'}
           </button>

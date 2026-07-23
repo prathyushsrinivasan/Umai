@@ -5,8 +5,10 @@ import { Link, useParams } from 'react-router-dom'
 import { fetchRestaurant } from '../api/restaurants'
 import { ApiError } from '../api/client'
 import { RestaurantMiniMap } from '../components/map/RestaurantMiniMap'
+import { RestaurantPhoto } from '../components/restaurant/RestaurantPhoto'
 import { ReviewSection } from '../components/restaurant/ReviewSection'
 import { Chip } from '../components/ui/Chip'
+import { Icon } from '../components/ui/Icon'
 import { Rating } from '../components/ui/Rating'
 import { ErrorState, LoadingState } from '../components/ui/States'
 import { useAsync } from '../hooks/useAsync'
@@ -59,8 +61,8 @@ export function RestaurantDetailPage() {
       className="mx-auto max-w-4xl px-5 py-8"
     >
       <nav aria-label="パンくず" className="text-sm text-bark-400">
-        <Link to="/search" className="transition-colors hover:text-leaf-600">
-          お店を探す
+        <Link to="/" className="transition-colors hover:text-leaf-600">
+          地図で探す
         </Link>
         <span aria-hidden="true" className="mx-2">
           /
@@ -68,7 +70,21 @@ export function RestaurantDetailPage() {
         <span className="text-bark-600">{restaurant.name}</span>
       </nav>
 
-      <header className="mt-4">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.97 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.45, ease: 'easeOut' }}
+        className="hand-drawn crayon-border mt-4 overflow-hidden shadow-soft"
+      >
+        <RestaurantPhoto
+          imageUrl={restaurant.imageUrl}
+          name={restaurant.name}
+          categories={restaurant.categories}
+          className="h-52 sm:h-64"
+        />
+      </motion.div>
+
+      <header className="mt-6">
         <div className="flex flex-wrap items-center gap-2">
           <span
             className={`rounded-pill px-3.5 py-1.5 text-sm font-medium ${VEGETARIAN_TYPE_STYLES[restaurant.vegetarianType]}`}
@@ -118,7 +134,7 @@ export function RestaurantDetailPage() {
           店舗情報
         </h2>
 
-        <dl className="mt-4 divide-y divide-cream-200 overflow-hidden rounded-cozy border border-cream-200 bg-white shadow-soft">
+        <dl className="hand-drawn mt-4 divide-y divide-cream-200 overflow-hidden border border-cream-200 bg-white shadow-soft">
           {restaurant.area && <InfoRow label="エリア" value={restaurant.area.nameJa} />}
           {restaurant.address && <InfoRow label="住所" value={restaurant.address} />}
           {restaurant.openingHours && (
@@ -165,7 +181,7 @@ export function RestaurantDetailPage() {
         <h2 id="map-heading" className="font-display text-xl text-bark-800">
           地図
         </h2>
-        <div className="no-sketch mt-4 overflow-hidden rounded-cozy border border-cream-200 shadow-soft">
+        <div className="hand-drawn-alt mt-4 overflow-hidden border border-cream-200 shadow-soft">
           <RestaurantMiniMap
             latitude={restaurant.latitude}
             longitude={restaurant.longitude}
@@ -205,18 +221,16 @@ function InfoRow({ label, value, multiline = false }: InfoRowProps) {
 function NotFound() {
   return (
     <div className="mx-auto max-w-xl px-5 py-24 text-center">
-      <p aria-hidden="true" className="text-4xl">
-        🌱
-      </p>
+      <Icon name="sprout" className="mx-auto size-10 text-leaf-400" />
       <h1 className="font-display mt-4 text-2xl text-bark-800">お店が見つかりませんでした</h1>
       <p className="mt-3 text-bark-600">
         削除されたか、URL が間違っている可能性があります。
       </p>
       <Link
-        to="/search"
+        to="/"
         className="mt-8 inline-block rounded-pill bg-leaf-500 px-6 py-2.5 font-medium text-white shadow-soft transition-colors hover:bg-leaf-600"
       >
-        お店を探す
+        地図で探す
       </Link>
     </div>
   )

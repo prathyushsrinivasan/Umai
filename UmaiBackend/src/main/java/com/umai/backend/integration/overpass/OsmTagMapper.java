@@ -1,5 +1,7 @@
 package com.umai.backend.integration.overpass;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -83,6 +85,7 @@ public class OsmTagMapper {
 			resolveWebsite(tags),
 			trimToNull(firstPresent(tags, "phone", "contact:phone")),
 			trimToNull(tags.get("opening_hours")),
+			resolveImageUrl(tags),
 			null, // OSM price tags are too inconsistent to map to a band.
 			resolveCategorySlugs(tags)));
 	}
@@ -163,6 +166,49 @@ public class OsmTagMapper {
 		}
 
 		return website.length() > 500 ? null : website;
+	}
+
+	/**
+	 * Resolves a photo URL from OSM, when one is tagged.
+	 *
+	 * <p>Two sources, most direct first:
+	 * <ol>
+	 *   <li>{@code image} — a direct http(s) URL. Accepted only when it is one, so a
+	 *       malformed or hostile value cannot become an {@code <img src>} the frontend
+	 *       renders.</li>
+	 *   <li>{@code wikimedia_commons} — a Commons page reference like
+	 *       {@code File:Foo.jpg}. Only {@code File:} entries are single images; they are
+	 *       turned into a stable, correctly-licensed thumbnail via Commons'
+	 *       {@code Special:FilePath} redirect. {@code Category:} references are skipped
+	 *       because they are galleries, not a single representative photo.</li>
+	 * </ol>
+	 *
+	 * <p>Most venues have neither tag — those get no image here and fall back to the
+	 * frontend's generated cover.
+	 */
+	private String resolveImageUrl(Map<String, String> tags) {
+		String image = trimToNull(firstPresent(tags, "image", "wikimedia"));
+		if (image != null) {
+			String lower = image.toLowerCase();
+			if ((lower.startsWith("http://") || lower.startsWith("https://")) && image.length() <= 1000) {
+				return image;
+			}
+		}
+
+		String commons = trimToNull(tags.get("wikimedia_commons"));
+		if (commons != null && commons.regionMatches(true, 0, "File:", 0, "File:".length())) {
+			String file = commons.substring("File:".length()).trim();
+			if (!file.isEmpty()) {
+				// Special:FilePath redirects to the real file; width caps the thumbnail
+				// so we never serve a multi-megabyte original into a card.
+				String url = "https://commons.wikimedia.org/wiki/Special:FilePath/"
+					+ URLEncoder.encode(file.replace(' ', '_'), StandardCharsets.UTF_8)
+					+ "?width=800";
+				return url.length() <= 1000 ? url : null;
+			}
+		}
+
+		return null;
 	}
 
 	/**

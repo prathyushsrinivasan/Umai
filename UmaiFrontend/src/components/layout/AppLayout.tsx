@@ -1,6 +1,5 @@
 import { Outlet } from 'react-router-dom'
 
-import { SketchyDefs } from '../ui/SketchyDefs'
 import { SiteFooter } from './SiteFooter'
 import { SiteHeader } from './SiteHeader'
 
@@ -8,7 +7,6 @@ import { SiteHeader } from './SiteHeader'
 export function AppLayout() {
   return (
     <div className="flex min-h-svh flex-col">
-      <SketchyDefs />
       <SiteHeader />
       <main className="flex-1">
         <Outlet />

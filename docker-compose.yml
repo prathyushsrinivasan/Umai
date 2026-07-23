@@ -39,6 +39,9 @@ services:
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set in .env (openssl rand -base64 48)}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-12h}
       SUBMISSIONS_AUTO_PUBLISH: ${SUBMISSIONS_AUTO_PUBLISH:-true}
+      UMAI_ADMIN_EMAILS: ${UMAI_ADMIN_EMAILS:-}
+      # Optional: enables real restaurant photos (admin backfill). Empty = disabled.
+      FOURSQUARE_API_KEY: ${FOURSQUARE_API_KEY:-}
     ports:
       - '${BACKEND_PORT:-8080}:8080'
     healthcheck:
