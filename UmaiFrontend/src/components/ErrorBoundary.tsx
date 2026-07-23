@@ -40,12 +40,9 @@ export class ErrorBoundary extends Component<Props, State> {
         <p aria-hidden="true" className="text-4xl">
           🍂
         </p>
-        <h1 className="mt-4 text-2xl font-bold text-bark-800">
+        <h1 className="font-display mt-4 text-2xl text-bark-800">
           問題が発生しました
         </h1>
-        <p className="mt-3 text-bark-600">
-          ページの表示中にエラーが発生しました。再読み込みをお試しください。
-        </p>
 
         <div className="mt-8 flex flex-wrap justify-center gap-3">
           <button

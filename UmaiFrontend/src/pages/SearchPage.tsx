@@ -29,10 +29,7 @@ export function SearchPage() {
   return (
     <div className="mx-auto max-w-6xl px-5 py-10">
       <header>
-        <h1 className="text-2xl font-bold text-bark-800">お店を探す</h1>
-        <p className="mt-1 text-sm text-bark-600">
-          キーワードと条件を組み合わせて、ぴったりのお店を見つけましょう。
-        </p>
+        <h1 className="font-display text-3xl text-bark-800">お店を探す</h1>
       </header>
 
       <div className="mt-6">
@@ -43,9 +40,13 @@ export function SearchPage() {
         type="button"
         onClick={() => setFiltersOpen((open) => !open)}
         aria-expanded={filtersOpen}
-        className="mt-4 w-full cursor-pointer rounded-pill border border-cream-300 bg-white px-5 py-2.5 text-sm font-medium text-bark-600 shadow-soft transition-colors hover:border-leaf-300 lg:hidden"
+        aria-label={`絞り込み${activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}`}
+        className="mt-4 flex w-full cursor-pointer items-center justify-center gap-2 rounded-pill border border-cream-300 bg-white px-5 py-2.5 text-sm font-medium text-bark-600 shadow-soft transition-colors hover:border-leaf-300 lg:hidden"
       >
-        絞り込み{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
+        <FunnelIcon />
+        {activeFilterCount > 0 && (
+          <span className="rounded-pill bg-leaf-500 px-2 py-0.5 text-xs text-white">{activeFilterCount}</span>
+        )}
       </button>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[280px_1fr]">
@@ -77,9 +78,10 @@ export function SearchPage() {
                 <button
                   type="button"
                   onClick={clearAll}
-                  className="cursor-pointer rounded-pill bg-leaf-500 px-6 py-2 font-medium text-white transition-colors hover:bg-leaf-600"
+                  aria-label="条件をクリア"
+                  className="sketchy-edge inline-flex cursor-pointer items-center justify-center rounded-pill bg-leaf-500 p-3 text-white transition-colors hover:bg-leaf-600"
                 >
-                  条件をクリア
+                  <XIcon />
                 </button>
               )}
             </EmptyState>
@@ -125,9 +127,10 @@ function Pagination({ page, totalPages, onChange }: PaginationProps) {
         type="button"
         disabled={page === 0}
         onClick={() => onChange(page - 1)}
-        className="cursor-pointer rounded-pill border border-cream-300 bg-white px-5 py-2 text-sm text-bark-600 transition-colors hover:border-leaf-300 disabled:cursor-not-allowed disabled:opacity-40"
+        aria-label="前へ"
+        className="flex cursor-pointer items-center justify-center rounded-pill border border-cream-300 bg-white p-2.5 text-bark-600 transition-colors hover:border-leaf-300 disabled:cursor-not-allowed disabled:opacity-40"
       >
-        前へ
+        <ChevronIcon direction="left" />
       </button>
 
       <span className="text-sm text-bark-600">
@@ -138,10 +141,41 @@ function Pagination({ page, totalPages, onChange }: PaginationProps) {
         type="button"
         disabled={page >= totalPages - 1}
         onClick={() => onChange(page + 1)}
-        className="cursor-pointer rounded-pill border border-cream-300 bg-white px-5 py-2 text-sm text-bark-600 transition-colors hover:border-leaf-300 disabled:cursor-not-allowed disabled:opacity-40"
+        aria-label="次へ"
+        className="flex cursor-pointer items-center justify-center rounded-pill border border-cream-300 bg-white p-2.5 text-bark-600 transition-colors hover:border-leaf-300 disabled:cursor-not-allowed disabled:opacity-40"
       >
-        次へ
+        <ChevronIcon direction="right" />
       </button>
     </nav>
+  )
+}
+
+function FunnelIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="size-4">
+      <path d="M4 6h16M7 12h10M10.5 18h3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function XIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="size-4">
+      <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function ChevronIcon({ direction }: { direction: 'left' | 'right' }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="size-4">
+      <path
+        d={direction === 'left' ? 'M15 6l-6 6 6 6' : 'M9 6l6 6-6 6'}
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   )
 }

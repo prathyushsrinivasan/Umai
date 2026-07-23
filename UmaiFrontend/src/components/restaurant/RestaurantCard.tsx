@@ -26,15 +26,15 @@ export function RestaurantCard({ restaurant, index = 0 }: RestaurantCardProps) {
 
   return (
     <motion.article
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
+      initial={{ opacity: 0, y: 12, rotate: index % 2 === 0 ? -0.6 : 0.5 }}
+      animate={{ opacity: 1, y: 0, rotate: index % 2 === 0 ? -0.6 : 0.5 }}
       transition={{ duration: 0.35, delay: Math.min(index, 8) * 0.04, ease: 'easeOut' }}
-      whileHover={{ y: -4 }}
+      whileHover={{ y: -4, rotate: 0 }}
       className="group h-full"
     >
       <Link
         to={`/restaurants/${restaurant.id}`}
-        className="flex h-full flex-col overflow-hidden rounded-cozy border border-cream-200 bg-white shadow-soft transition-shadow hover:shadow-lifted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-leaf-500"
+        className="sketchy-edge-strong flex h-full flex-col overflow-hidden rounded-cozy border border-cream-200 bg-white shadow-soft transition-shadow hover:shadow-lifted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-leaf-500"
       >
         <RestaurantImage imageUrl={imageUrl} name={restaurant.name} />
 

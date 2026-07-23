@@ -26,7 +26,7 @@ export function SiteHeader() {
           className="flex shrink-0 items-center gap-2.5 rounded-pill py-1 transition-colors hover:text-leaf-600"
         >
           <LeafMark />
-          <span className="text-lg font-bold tracking-wide">Umai</span>
+          <span className="font-display text-xl tracking-wide">Umai</span>
         </Link>
 
         <nav aria-label="メインナビゲーション" className="hidden items-center gap-1 md:flex">
@@ -35,11 +35,12 @@ export function SiteHeader() {
               key={item.to}
               to={item.to}
               className={({ isActive }) =>
-                `rounded-pill px-4 py-2 text-sm transition-colors ${
+                `flex items-center gap-1.5 rounded-pill px-4 py-2 text-sm transition-colors ${
                   isActive ? 'bg-leaf-100 font-medium text-leaf-700' : 'text-bark-600 hover:bg-cream-100'
                 }`
               }
             >
+              <span aria-hidden="true">{item.icon}</span>
               {item.label}
             </NavLink>
           ))}
@@ -48,9 +49,10 @@ export function SiteHeader() {
         <div className="flex items-center gap-2">
           <Link
             to="/restaurants/new"
-            className="hidden rounded-pill bg-leaf-500 px-4 py-2 text-sm font-medium text-white shadow-soft transition-colors hover:bg-leaf-600 sm:block"
+            aria-label="レストラン追加"
+            className="sketchy-edge hidden items-center justify-center rounded-pill bg-leaf-500 p-2.5 text-white shadow-soft transition-colors hover:bg-leaf-600 sm:flex"
           >
-            レストラン追加
+            <PlusIcon />
           </Link>
 
           {user ? (
@@ -69,17 +71,19 @@ export function SiteHeader() {
               <button
                 type="button"
                 onClick={logout}
-                className="cursor-pointer rounded-pill border border-cream-300 px-4 py-2 text-sm text-bark-600 transition-colors hover:border-leaf-300 hover:text-leaf-700"
+                aria-label="ログアウト"
+                className="flex cursor-pointer items-center justify-center rounded-pill border border-cream-300 p-2.5 text-bark-600 transition-colors hover:border-leaf-300 hover:text-leaf-700"
               >
-                ログアウト
+                <LogoutIcon />
               </button>
             </div>
           ) : (
             <Link
               to="/login"
-              className="hidden rounded-pill border border-cream-300 px-4 py-2 text-sm text-bark-600 transition-colors hover:border-leaf-300 hover:text-leaf-700 sm:block"
+              aria-label="ログイン"
+              className="hidden items-center justify-center rounded-pill border border-cream-300 p-2.5 text-bark-600 transition-colors hover:border-leaf-300 hover:text-leaf-700 sm:flex"
             >
-              ログイン
+              <PersonIcon />
             </Link>
           )}
 
@@ -153,6 +157,37 @@ export function SiteHeader() {
         )}
       </AnimatePresence>
     </header>
+  )
+}
+
+function PlusIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="size-4">
+      <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function PersonIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="size-4">
+      <circle cx="12" cy="8" r="3.2" stroke="currentColor" strokeWidth="2" />
+      <path d="M5 20c1.2-4 4-6 7-6s5.8 2 7 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function LogoutIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="size-4">
+      <path
+        d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3M15 8l4 4-4 4M19 12H9"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   )
 }
 

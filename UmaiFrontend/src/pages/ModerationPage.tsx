@@ -57,10 +57,7 @@ export function ModerationPage() {
   return (
     <div className="mx-auto max-w-4xl px-5 py-10">
       <header>
-        <h1 className="text-2xl font-bold text-bark-800">モデレーション</h1>
-        <p className="mt-1 text-sm text-bark-600">
-          投稿されたお店を確認して、公開または却下します。
-        </p>
+        <h1 className="font-display text-3xl text-bark-800">モデレーション</h1>
       </header>
 
       <div role="tablist" aria-label="状態で絞り込み" className="mt-6 flex flex-wrap gap-2">

@@ -39,14 +39,20 @@
   --radius-cozy: 1.25rem;
   --radius-pill: 9999px;
 
-  /* Soft, diffuse shadows — never harsh. */
-  --shadow-soft: 0 2px 8px rgb(61 56 47 / 0.06), 0 8px 24px rgb(61 56 47 / 0.06);
-  --shadow-lifted: 0 4px 12px rgb(61 56 47 / 0.08), 0 16px 36px rgb(61 56 47 / 0.1);
+  /* Flat, hand-placed "sticker" shadows — no blur, so they still read as
+     intentional once the sketchy edge filter displaces them. */
+  --shadow-soft: 4px 4px 0 rgb(61 56 47 / 0.35);
+  --shadow-lifted: 7px 7px 0 rgb(61 56 47 / 0.4);
 
   /* Japanese-first system font stack; no webfont download required. */
   --font-sans:
     'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', 'Yu Gothic UI',
     Meiryo, system-ui, sans-serif;
+
+  /* Crayon/marker display face for headings, nav and short labels only —
+     Yomogi is self-hosted via @fontsource/yomogi (imported in main.tsx), so
+     there's no external font request at runtime. */
+  --font-display: 'Yomogi', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', Meiryo, system-ui, sans-serif;
 }
 
 @layer base {
@@ -70,5 +76,43 @@
       transition-duration: 0.01ms !important;
       scroll-behavior: auto !important;
     }
+  }
+}
+
+@layer utilities {
+  /* Hand-drawn wobble for card/panel surfaces. Applied only to `.rounded-cozy`
+     (cards) and not `.rounded-pill` (chips/badges) — at pill sizes the
+     displacement either does nothing visible or garbles small text, and pills
+     appear in the highest simultaneous counts (filter chip grids), which is
+     where the render cost would actually bite. References the filter defined
+     once in <SketchyDefs>. */
+  .rounded-cozy {
+    filter: url(#sketchy-edge);
+  }
+
+  /* Opt-in for the handful of pill-shaped elements (primary CTAs) that want
+     the same treatment, without broadening the blanket rule above. */
+  .sketchy-edge {
+    filter: url(#sketchy-edge);
+  }
+
+  /* Bolder wobble for sparse, large-text display cards — must come after
+     `.rounded-cozy` above so it wins when both classes are present. */
+  .sketchy-edge-strong {
+    filter: url(#sketchy-edge-strong);
+  }
+
+  /* Opt-out for surfaces where distorting the content itself would hurt
+     usability rather than add charm (e.g. the Leaflet map tiles) — must come
+     after `.rounded-cozy` above so it wins when both classes are present. */
+  .no-sketch {
+    filter: none;
+  }
+
+  /* Bolder, crayon-weight outlines on every card and pill — adds to
+     whatever border color/width utility a component already applies. */
+  .rounded-cozy,
+  .rounded-pill {
+    border-width: 2px;
   }
 }

@@ -66,14 +66,11 @@ export function MapPage() {
   return (
     <div className="mx-auto max-w-7xl px-5 py-8">
       <header>
-        <h1 className="text-2xl font-bold text-bark-800">マップから探す</h1>
-        <p className="mt-1 text-sm text-bark-600">
-          地図を動かすと、表示範囲内のお店が一覧に反映されます。
-        </p>
+        <h1 className="font-display text-3xl text-bark-800">マップから探す</h1>
       </header>
 
       <div className="mt-6 grid gap-5 lg:grid-cols-[1fr_360px]">
-        <div className="overflow-hidden rounded-cozy border border-cream-200 shadow-soft">
+        <div className="no-sketch overflow-hidden rounded-cozy border border-cream-200 shadow-soft">
           <MapContainer
             center={TOKYO_CENTER}
             zoom={TOKYO_DEFAULT_ZOOM}
@@ -102,7 +99,7 @@ export function MapPage() {
 
         <aside aria-label="表示範囲内のお店" className="flex flex-col">
           <div className="flex items-baseline justify-between gap-2">
-            <h2 className="font-bold text-bark-800">この範囲のお店</h2>
+            <h2 className="font-display text-lg text-bark-800">この範囲のお店</h2>
             {result && (
               <span className="text-sm text-bark-400">
                 {loading ? '更新中…' : `${result.totalInBounds}件`}
@@ -112,7 +109,7 @@ export function MapPage() {
 
           {result?.truncated && (
             <p className="mt-2 rounded-cozy bg-apricot-300/25 px-4 py-2.5 text-xs text-bark-800">
-              件数が多いため一部のみ表示しています。地図を拡大すると絞り込まれます。
+              一部のみ表示しています（拡大で絞り込み）
             </p>
           )}
 
@@ -124,9 +121,7 @@ export function MapPage() {
 
           {!error && !loading && restaurants.length === 0 && (
             <p className="mt-4 rounded-cozy border border-cream-200 bg-white p-6 text-center text-sm text-bark-600 shadow-soft">
-              この範囲にお店が見つかりませんでした。
-              <br />
-              地図を移動または縮小してみてください。
+              この範囲にお店が見つかりませんでした
             </p>
           )}
 
@@ -169,9 +164,10 @@ export function MapPage() {
                     />
                     <Link
                       to={`/restaurants/${restaurant.id}`}
-                      className="shrink-0 text-xs font-medium text-leaf-600 hover:underline"
+                      aria-label="詳細を見る"
+                      className="flex shrink-0 items-center justify-center rounded-pill p-1.5 text-leaf-600 transition-colors hover:bg-leaf-50"
                     >
-                      詳細 →
+                      <ArrowIcon />
                     </Link>
                   </div>
                 </div>
@@ -208,10 +204,20 @@ function MarkerPreview({ restaurant }: { restaurant: RestaurantSummary }) {
 
       <Link
         to={`/restaurants/${restaurant.id}`}
-        className="mt-1 inline-block rounded-pill bg-leaf-500 px-4 py-1.5 text-xs font-medium text-white hover:bg-leaf-600"
+        aria-label="詳細を見る"
+        className="mt-1 inline-flex items-center gap-1 rounded-pill bg-leaf-500 px-4 py-1.5 text-xs font-medium text-white hover:bg-leaf-600"
       >
-        詳細を見る
+        詳細
+        <ArrowIcon />
       </Link>
     </div>
+  )
+}
+
+function ArrowIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="size-3.5">
+      <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   )
 }

@@ -113,10 +113,8 @@ export function SubmitRestaurantPage() {
       className="mx-auto max-w-2xl px-5 py-10"
     >
       <header>
-        <h1 className="text-2xl font-bold text-bark-800">レストラン追加</h1>
-        <p className="mt-1 text-sm text-bark-600">
-          まだ登録されていないお店を教えてください。わかる範囲で構いません。
-        </p>
+        <h1 className="font-display text-3xl text-bark-800">レストラン追加</h1>
+        <p className="mt-1 text-sm text-bark-600">わかる範囲でどうぞ。</p>
       </header>
 
       <form onSubmit={handleSubmit} className="mt-8 space-y-6">
@@ -227,9 +225,6 @@ export function SubmitRestaurantPage() {
               error={fieldErrors.longitude}
             />
           </div>
-          <p className="text-xs text-bark-400">
-            地図サービスでお店の位置を右クリックすると座標を確認できます。
-          </p>
         </Section>
 
         <Section title="詳細情報（任意）">
@@ -287,7 +282,7 @@ export function SubmitRestaurantPage() {
         <button
           type="submit"
           disabled={submitting}
-          className="w-full cursor-pointer rounded-pill bg-leaf-500 py-3.5 font-medium text-white shadow-soft transition-colors hover:bg-leaf-600 disabled:cursor-not-allowed disabled:opacity-60"
+          className="sketchy-edge font-display w-full cursor-pointer rounded-pill bg-leaf-500 py-3.5 text-lg text-white shadow-soft transition-colors hover:bg-leaf-600 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {submitting ? '送信中…' : 'このお店を登録する'}
         </button>
@@ -307,7 +302,7 @@ function Required() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="space-y-4 rounded-cozy border border-cream-200 bg-white p-6 shadow-soft">
-      <h2 className="font-bold text-bark-800">{title}</h2>
+      <h2 className="font-display text-lg text-bark-800">{title}</h2>
       {children}
     </section>
   )

@@ -71,9 +71,12 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
       onUnauthorized?.()
     }
 
+    // Prefer the first field-specific message (already localized, e.g. "使用できない
+    // 文字が含まれています") over the generic top-level message, so validation
+    // failures tell the user what's actually wrong.
     throw new ApiError(
       response.status,
-      errorBody?.message ?? `Request failed with status ${response.status}`,
+      errorBody?.fieldErrors?.[0]?.message ?? errorBody?.message ?? `Request failed with status ${response.status}`,
       errorBody,
     )
   }

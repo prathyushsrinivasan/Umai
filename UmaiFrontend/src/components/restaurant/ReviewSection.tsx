@@ -60,7 +60,7 @@ export function ReviewSection({ restaurantId, onChanged }: ReviewSectionProps) {
 
   return (
     <section className="mt-8" aria-labelledby="reviews-heading">
-      <h2 id="reviews-heading" className="text-lg font-bold text-bark-800">
+      <h2 id="reviews-heading" className="font-display text-xl text-bark-800">
         レビュー
         {data && data.totalElements > 0 && (
           <span className="ml-2 text-sm font-normal text-bark-400">{data.totalElements}件</span>
@@ -93,7 +93,7 @@ export function ReviewSection({ restaurantId, onChanged }: ReviewSectionProps) {
 
         {data && reviews.length === 0 && !loading && (
           <p className="rounded-cozy border border-cream-200 bg-white p-8 text-center text-sm text-bark-600 shadow-soft">
-            まだレビューがありません。最初のレビューを投稿してみませんか？
+            まだレビューがありません
           </p>
         )}
 
@@ -291,7 +291,7 @@ function ReviewForm({ restaurantId, existingReview, onChanged }: ReviewFormProps
           onChange={(event) => setComment(event.target.value)}
           rows={4}
           maxLength={2000}
-          placeholder="お店の雰囲気やおすすめメニューを教えてください。"
+          placeholder="感想をどうぞ（任意）"
           className="mt-1.5 w-full rounded-cozy border border-cream-300 px-4 py-3 text-bark-800 transition-colors placeholder:text-bark-400 focus:border-leaf-400 focus:outline-none focus:ring-3 focus:ring-leaf-100"
         />
         <p className="mt-1 text-right text-xs text-bark-400">{comment.length} / 2000</p>
@@ -307,7 +307,7 @@ function ReviewForm({ restaurantId, existingReview, onChanged }: ReviewFormProps
         <button
           type="submit"
           disabled={submitting}
-          className="cursor-pointer rounded-pill bg-leaf-500 px-6 py-2.5 font-medium text-white shadow-soft transition-colors hover:bg-leaf-600 disabled:cursor-not-allowed disabled:opacity-60"
+          className="sketchy-edge font-display cursor-pointer rounded-pill bg-leaf-500 px-6 py-2.5 text-white shadow-soft transition-colors hover:bg-leaf-600 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {submitting ? '送信中…' : existingReview ? '更新する' : '投稿する'}
         </button>

@@ -21,8 +21,10 @@ public final class AuthDtos {
 			@NotBlank
 			@Size(min = 2, max = 50)
 			// Restricted to a predictable character set so display names cannot be used
-			// to smuggle markup or confusable whitespace into the UI.
-			@Pattern(regexp = "^[\\p{L}\\p{N}_.-]+$", message = "使用できない文字が含まれています")
+			// to smuggle markup or confusable whitespace into the UI. A single space
+			// between words is allowed (e.g. "田中 太郎"); leading/trailing/repeated
+			// spaces are not.
+			@Pattern(regexp = "^[\\p{L}\\p{N}_.-]+( [\\p{L}\\p{N}_.-]+)*$", message = "使用できない文字が含まれています")
 			@Schema(example = "taro") String username,
 
 			@NotBlank @Email @Size(max = 255)

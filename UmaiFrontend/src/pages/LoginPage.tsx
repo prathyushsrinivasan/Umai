@@ -65,7 +65,7 @@ export function LoginPage() {
       className="mx-auto max-w-md px-5 py-14"
     >
       <div className="rounded-cozy border border-cream-200 bg-white p-8 shadow-soft">
-        <h1 className="text-center text-2xl font-bold text-bark-800">
+        <h1 className="font-display text-center text-3xl text-bark-800">
           {mode === 'login' ? 'ログイン' : '新規登録'}
         </h1>
         <p className="mt-2 text-center text-sm text-bark-600">
@@ -142,7 +142,7 @@ export function LoginPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full cursor-pointer rounded-pill bg-leaf-500 py-3 font-medium text-white shadow-soft transition-colors hover:bg-leaf-600 disabled:cursor-not-allowed disabled:opacity-60"
+            className="sketchy-edge font-display w-full cursor-pointer rounded-pill bg-leaf-500 py-3 text-lg text-white shadow-soft transition-colors hover:bg-leaf-600 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {submitting ? '送信中…' : mode === 'login' ? 'ログイン' : 'アカウントを作成'}
           </button>

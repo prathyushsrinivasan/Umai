@@ -23,14 +23,11 @@ export function CategoriesPage() {
   return (
     <div className="mx-auto max-w-5xl px-5 py-10">
       <header>
-        <h1 className="text-2xl font-bold text-bark-800">タイプから探す</h1>
-        <p className="mt-1 text-sm text-bark-600">
-          対応の種類、料理ジャンル、エリアからお店を探せます。
-        </p>
+        <h1 className="font-display text-3xl text-bark-800">タイプから探す</h1>
       </header>
 
       <section className="mt-10" aria-labelledby="diet-heading">
-        <h2 id="diet-heading" className="text-lg font-bold text-bark-800">
+        <h2 id="diet-heading" className="font-display text-xl text-bark-800">
           ヴィーガン・ベジタリアン対応
         </h2>
 
@@ -48,7 +45,7 @@ export function CategoriesPage() {
       </section>
 
       <section className="mt-10" aria-labelledby="cuisine-heading">
-        <h2 id="cuisine-heading" className="text-lg font-bold text-bark-800">
+        <h2 id="cuisine-heading" className="font-display text-xl text-bark-800">
           料理ジャンル
         </h2>
 
@@ -76,7 +73,7 @@ export function CategoriesPage() {
       </section>
 
       <section className="mt-10" aria-labelledby="area-heading">
-        <h2 id="area-heading" className="text-lg font-bold text-bark-800">
+        <h2 id="area-heading" className="font-display text-xl text-bark-800">
           エリア
         </h2>
 
@@ -122,7 +119,7 @@ function TileLink({ to, label, description, icon, index }: TileLinkProps) {
     >
       <Link
         to={to}
-        className="flex h-full items-start gap-3 rounded-cozy border border-cream-200 bg-white px-5 py-4 shadow-soft transition-all hover:-translate-y-0.5 hover:border-leaf-300 hover:shadow-lifted"
+        className="sketchy-edge-strong flex h-full items-start gap-3 rounded-cozy border border-cream-200 bg-white px-5 py-4 shadow-soft transition-all hover:-translate-y-0.5 hover:border-leaf-300 hover:shadow-lifted"
       >
         <span aria-hidden="true" className="text-xl">
           {icon}

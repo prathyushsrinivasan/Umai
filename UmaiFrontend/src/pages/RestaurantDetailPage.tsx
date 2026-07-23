@@ -80,7 +80,7 @@ export function RestaurantDetailPage() {
           ))}
         </div>
 
-        <h1 className="mt-4 text-2xl font-bold text-bark-800 sm:text-3xl">{restaurant.name}</h1>
+        <h1 className="font-display mt-4 text-3xl text-bark-800 sm:text-4xl">{restaurant.name}</h1>
 
         <div className="mt-3">
           <Rating
@@ -114,7 +114,7 @@ export function RestaurantDetailPage() {
       )}
 
       <section className="mt-8" aria-labelledby="info-heading">
-        <h2 id="info-heading" className="text-lg font-bold text-bark-800">
+        <h2 id="info-heading" className="font-display text-xl text-bark-800">
           店舗情報
         </h2>
 
@@ -162,10 +162,10 @@ export function RestaurantDetailPage() {
       </section>
 
       <section className="mt-8" aria-labelledby="map-heading">
-        <h2 id="map-heading" className="text-lg font-bold text-bark-800">
+        <h2 id="map-heading" className="font-display text-xl text-bark-800">
           地図
         </h2>
-        <div className="mt-4 overflow-hidden rounded-cozy border border-cream-200 shadow-soft">
+        <div className="no-sketch mt-4 overflow-hidden rounded-cozy border border-cream-200 shadow-soft">
           <RestaurantMiniMap
             latitude={restaurant.latitude}
             longitude={restaurant.longitude}
@@ -180,7 +180,7 @@ export function RestaurantDetailPage() {
 
       {restaurant.source === 'SEED' && (
         <p className="mt-8 rounded-cozy bg-cream-100 px-4 py-3 text-xs text-bark-400">
-          ※ このお店は開発用のサンプルデータです。実在する店舗ではありません。
+          ※ このお店は開発用のサンプルデータです。
         </p>
       )}
     </motion.article>
@@ -208,7 +208,7 @@ function NotFound() {
       <p aria-hidden="true" className="text-4xl">
         🌱
       </p>
-      <h1 className="mt-4 text-2xl font-bold text-bark-800">お店が見つかりませんでした</h1>
+      <h1 className="font-display mt-4 text-2xl text-bark-800">お店が見つかりませんでした</h1>
       <p className="mt-3 text-bark-600">
         削除されたか、URL が間違っている可能性があります。
       </p>

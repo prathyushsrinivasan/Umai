@@ -48,14 +48,16 @@ export function RestaurantFilters({
   return (
     <div className="space-y-6 rounded-cozy border border-cream-200 bg-white p-6 shadow-soft">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="font-bold text-bark-800">絞り込み</h2>
+        <h2 className="font-display text-xl text-bark-800">絞り込み</h2>
         {activeFilterCount > 0 && (
           <button
             type="button"
             onClick={onClear}
-            className="cursor-pointer text-sm text-leaf-600 transition-colors hover:text-leaf-700"
+            aria-label={`条件をクリア (${activeFilterCount})`}
+            className="flex cursor-pointer items-center gap-1 text-sm text-leaf-600 transition-colors hover:text-leaf-700"
           >
-            条件をクリア ({activeFilterCount})
+            <XIcon />
+            {activeFilterCount}
           </button>
         )}
       </div>
@@ -133,6 +135,14 @@ export function RestaurantFilters({
         </FilterGroup>
       )}
     </div>
+  )
+}
+
+function XIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="size-3.5">
+      <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+    </svg>
   )
 }
 
