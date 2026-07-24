@@ -27,11 +27,12 @@ public final class RestaurantSpecifications {
 	}
 
 	/**
-	 * Case-insensitive partial match across name, description and address.
+	 * Case-insensitive partial match across name, description, address, and area name.
 	 *
 	 * <p>Uses LIKE with a leading wildcard, which the pg_trgm GIN indexes on those
 	 * columns can serve. Japanese has no word boundaries, so substring matching is the
-	 * right default here.
+	 * right default here. The area join is left (not inner) so a restaurant with no
+	 * area assigned yet still matches on its other fields rather than being dropped.
 	 */
 	public static Specification<Restaurant> matchesKeyword(String keyword) {
 		return (root, query, cb) -> {
@@ -42,10 +43,13 @@ public final class RestaurantSpecifications {
 				.replace("_", "!_");
 			String pattern = "%" + escaped.toLowerCase() + "%";
 
+			var area = root.join("area", JoinType.LEFT);
+
 			return cb.or(
 				cb.like(cb.lower(root.get("name")), pattern, '!'),
 				cb.like(cb.lower(root.get("description")), pattern, '!'),
-				cb.like(cb.lower(root.get("address")), pattern, '!'));
+				cb.like(cb.lower(root.get("address")), pattern, '!'),
+				cb.like(cb.lower(area.get("nameJa")), pattern, '!'));
 		};
 	}
 

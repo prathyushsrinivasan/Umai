@@ -51,9 +51,10 @@ public class PhotoBackfillController {
 		description = "写真のない公開店舗に、外部プロバイダーからカバー写真を付与します。1 回につき最大 limit 件を処理します。")
 	public ResponseEntity<?> backfill(@RequestParam(defaultValue = "25") @Min(1) @Max(100) int limit) {
 		if (!backfillService.isAvailable()) {
-			// 409: the endpoint exists but the provider needs an API key to be usable.
+			// 409: unreachable in practice (Wikipedia needs no key and is always enabled),
+			// kept as a guard in case every provider is ever disabled.
 			return ResponseEntity.status(HttpStatus.CONFLICT).body(new Message(
-				"写真プロバイダーが設定されていません。FOURSQUARE_API_KEY を設定してください。"));
+				"写真プロバイダーが利用できません。"));
 		}
 		return ResponseEntity.ok(backfillService.backfill(limit));
 	}

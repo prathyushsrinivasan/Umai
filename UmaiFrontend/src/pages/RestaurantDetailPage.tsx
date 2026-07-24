@@ -12,11 +12,10 @@ import { Icon } from '../components/ui/Icon'
 import { Rating } from '../components/ui/Rating'
 import { ErrorState, LoadingState } from '../components/ui/States'
 import { useAsync } from '../hooks/useAsync'
-import {
-  PRICE_RANGE_LABELS,
-  VEGETARIAN_TYPE_LABELS,
-  VEGETARIAN_TYPE_STYLES,
-} from '../lib/labels'
+import { areaLabel, categoryLabel, tagLabel } from '../i18n/dataLabels'
+import { useLanguage } from '../i18n/useLanguage'
+import { useRomanized } from '../i18n/useRomanized'
+import { VEGETARIAN_TYPE_STYLES } from '../lib/labels'
 
 /**
  * 店舗詳細 — everything known about one restaurant.
@@ -25,6 +24,7 @@ import {
  * note tells the user the information is simply missing.
  */
 export function RestaurantDetailPage() {
+  const { lang, t } = useLanguage()
   const { id } = useParams<{ id: string }>()
   const restaurantId = Number(id)
 
@@ -34,11 +34,18 @@ export function RestaurantDetailPage() {
   )
   const { data: restaurant, loading, error, reload } = useAsync(load)
 
+  // Hooks must run unconditionally (before the early returns below), so these read
+  // from `restaurant?.` and fall back to null while it's still loading.
+  const name = useRomanized(restaurant?.name ?? null)
+  const address = useRomanized(restaurant?.address ?? null)
+  const description = useRomanized(restaurant?.description ?? null)
+  const openingHours = useRomanized(restaurant?.openingHours ?? null)
+
   if (!Number.isFinite(restaurantId)) {
     return <NotFound />
   }
 
-  if (loading) return <LoadingState label="お店の情報を読み込んでいます…" />
+  if (loading) return <LoadingState label={t.detailPage.loadingLabel} />
 
   if (error) {
     if (error instanceof ApiError && error.status === 404) return <NotFound />
@@ -60,14 +67,14 @@ export function RestaurantDetailPage() {
       transition={{ duration: 0.4, ease: 'easeOut' }}
       className="mx-auto max-w-4xl px-5 py-8"
     >
-      <nav aria-label="パンくず" className="text-sm text-bark-400">
+      <nav aria-label={t.detailPage.breadcrumbAriaLabel} className="text-sm text-bark-400">
         <Link to="/" className="transition-colors hover:text-leaf-600">
-          地図で探す
+          {t.detailPage.breadcrumbHome}
         </Link>
         <span aria-hidden="true" className="mx-2">
           /
         </span>
-        <span className="text-bark-600">{restaurant.name}</span>
+        <span className="text-bark-600">{name}</span>
       </nav>
 
       <motion.div
@@ -80,7 +87,7 @@ export function RestaurantDetailPage() {
           imageUrl={restaurant.imageUrl}
           name={restaurant.name}
           categories={restaurant.categories}
-          className="h-52 sm:h-64"
+          className="h-52 w-full sm:h-64"
         />
       </motion.div>
 
@@ -89,14 +96,14 @@ export function RestaurantDetailPage() {
           <span
             className={`rounded-pill px-3.5 py-1.5 text-sm font-medium ${VEGETARIAN_TYPE_STYLES[restaurant.vegetarianType]}`}
           >
-            {VEGETARIAN_TYPE_LABELS[restaurant.vegetarianType]}
+            {t.vegetarianType[restaurant.vegetarianType]}
           </span>
           {restaurant.categories.map((category) => (
-            <Chip key={category.id} label={category.nameJa} readOnly />
+            <Chip key={category.id} label={categoryLabel(category, lang)} readOnly />
           ))}
         </div>
 
-        <h1 className="font-display mt-4 text-3xl text-bark-800 sm:text-4xl">{restaurant.name}</h1>
+        <h1 className="font-display mt-4 text-3xl text-bark-800 sm:text-4xl">{name}</h1>
 
         <div className="mt-3">
           <Rating
@@ -107,20 +114,18 @@ export function RestaurantDetailPage() {
         </div>
       </header>
 
-      {restaurant.description && (
-        <p className="mt-6 leading-relaxed text-bark-600">{restaurant.description}</p>
-      )}
+      {description && <p className="mt-6 leading-relaxed text-bark-600">{description}</p>}
 
       {restaurant.tags.length > 0 && (
         <section className="mt-6" aria-labelledby="tags-heading">
           <h2 id="tags-heading" className="sr-only">
-            こだわり条件
+            {t.detailPage.tagsHeading}
           </h2>
           <div className="flex flex-wrap gap-2">
             {restaurant.tags.map((tag) => (
               <Chip
                 key={tag.id}
-                label={tag.nameJa}
+                label={tagLabel(tag, lang)}
                 readOnly
                 className="bg-leaf-50 text-leaf-700"
               />
@@ -131,21 +136,19 @@ export function RestaurantDetailPage() {
 
       <section className="mt-8" aria-labelledby="info-heading">
         <h2 id="info-heading" className="font-display text-xl text-bark-800">
-          店舗情報
+          {t.detailPage.info}
         </h2>
 
         <dl className="hand-drawn mt-4 divide-y divide-cream-200 overflow-hidden border border-cream-200 bg-white shadow-soft">
-          {restaurant.area && <InfoRow label="エリア" value={restaurant.area.nameJa} />}
-          {restaurant.address && <InfoRow label="住所" value={restaurant.address} />}
-          {restaurant.openingHours && (
-            <InfoRow label="営業時間" value={restaurant.openingHours} multiline />
-          )}
+          {restaurant.area && <InfoRow label={t.detailPage.area} value={areaLabel(restaurant.area, lang)} />}
+          {address && <InfoRow label={t.detailPage.address} value={address} />}
+          {openingHours && <InfoRow label={t.detailPage.hours} value={openingHours} multiline />}
           {restaurant.priceRange && (
-            <InfoRow label="価格帯" value={PRICE_RANGE_LABELS[restaurant.priceRange]} />
+            <InfoRow label={t.detailPage.price} value={t.priceRange[restaurant.priceRange]} />
           )}
           {restaurant.phone && (
             <InfoRow
-              label="電話番号"
+              label={t.detailPage.phone}
               value={
                 <a href={`tel:${restaurant.phone}`} className="text-leaf-600 hover:underline">
                   {restaurant.phone}
@@ -155,7 +158,7 @@ export function RestaurantDetailPage() {
           )}
           {restaurant.websiteUrl && (
             <InfoRow
-              label="Webサイト"
+              label={t.detailPage.website}
               value={
                 <a
                   href={restaurant.websiteUrl}
@@ -171,21 +174,19 @@ export function RestaurantDetailPage() {
         </dl>
 
         {!hasContactInfo && (
-          <p className="mt-3 text-sm text-bark-400">
-            営業時間・電話番号・Webサイトの情報はまだ登録されていません。
-          </p>
+          <p className="mt-3 text-sm text-bark-400">{t.detailPage.noContactInfo}</p>
         )}
       </section>
 
       <section className="mt-8" aria-labelledby="map-heading">
         <h2 id="map-heading" className="font-display text-xl text-bark-800">
-          地図
+          {t.detailPage.mapHeading}
         </h2>
         <div className="hand-drawn-alt mt-4 overflow-hidden border border-cream-200 shadow-soft">
           <RestaurantMiniMap
             latitude={restaurant.latitude}
             longitude={restaurant.longitude}
-            name={restaurant.name}
+            name={name ?? restaurant.name}
           />
         </div>
       </section>
@@ -196,7 +197,7 @@ export function RestaurantDetailPage() {
 
       {restaurant.source === 'SEED' && (
         <p className="mt-8 rounded-cozy bg-cream-100 px-4 py-3 text-xs text-bark-400">
-          ※ このお店は開発用のサンプルデータです。
+          {t.detailPage.seedNotice}
         </p>
       )}
     </motion.article>
@@ -219,18 +220,17 @@ function InfoRow({ label, value, multiline = false }: InfoRowProps) {
 }
 
 function NotFound() {
+  const { t } = useLanguage()
   return (
     <div className="mx-auto max-w-xl px-5 py-24 text-center">
       <Icon name="sprout" className="mx-auto size-10 text-leaf-400" />
-      <h1 className="font-display mt-4 text-2xl text-bark-800">お店が見つかりませんでした</h1>
-      <p className="mt-3 text-bark-600">
-        削除されたか、URL が間違っている可能性があります。
-      </p>
+      <h1 className="font-display mt-4 text-2xl text-bark-800">{t.detailPage.notFoundTitle}</h1>
+      <p className="mt-3 text-bark-600">{t.detailPage.notFoundBody}</p>
       <Link
         to="/"
         className="mt-8 inline-block rounded-pill bg-leaf-500 px-6 py-2.5 font-medium text-white shadow-soft transition-colors hover:bg-leaf-600"
       >
-        地図で探す
+        {t.detailPage.notFoundCta}
       </Link>
     </div>
   )

@@ -64,6 +64,12 @@
     @apply bg-cream-50 text-bark-800 font-sans antialiased;
     /* Japanese text needs a little more line height to stay comfortable. */
     line-height: 1.8;
+    /* A faint scattered doodle tile (little leaves, sprouts, seeds) instead of a flat
+       fill — barely-there (stroke opacity 0.35 baked into the SVG) so it reads as
+       paper texture, not decoration competing with cards or the map. */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'%3E%3Cg fill='none' stroke='%23a89e8c' stroke-width='1.6' stroke-linecap='round'%3E%3Cpath d='M22 26c8-10 20-10 26-2-10 4-18 4-26 2Z' opacity='0.35'/%3E%3Cpath d='M112 46c6-8 16-8 21-1-8 3-15 3-21 1Z' opacity='0.35'/%3E%3Cpath d='M38 122c3-6 10-8 15-5' opacity='0.3'/%3E%3Cpath d='M132 118c8 1 12 7 11 13-7-1-11-6-11-13Z' opacity='0.3'/%3E%3Ccircle cx='64' cy='96' r='2.2' fill='%23a89e8c' stroke='none' opacity='0.3'/%3E%3Ccircle cx='140' cy='70' r='1.8' fill='%23a89e8c' stroke='none' opacity='0.3'/%3E%3Ccircle cx='16' cy='90' r='1.8' fill='%23a89e8c' stroke='none' opacity='0.3'/%3E%3C/g%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 160px 160px;
   }
 
   /* Respect users who prefer reduced motion — animation is decorative here. */

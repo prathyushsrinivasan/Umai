@@ -3,6 +3,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import type { ReactElement, ReactNode } from 'react'
 
 import { AuthProvider } from '../auth/AuthContext'
+import { LanguageProvider } from '../i18n/LanguageContext'
 import type { AuthUser } from '../types/auth'
 
 interface Options extends Omit<RenderOptions, 'wrapper'> {
@@ -40,9 +41,11 @@ export function renderWithProviders(ui: ReactElement, options: Options = {}) {
   function Wrapper({ children }: { children: ReactNode }) {
     return (
       <MemoryRouter initialEntries={[route]}>
-        <AuthProvider>
-          {path ? <Routes><Route path={path} element={children} /></Routes> : children}
-        </AuthProvider>
+        <LanguageProvider>
+          <AuthProvider>
+            {path ? <Routes><Route path={path} element={children} /></Routes> : children}
+          </AuthProvider>
+        </LanguageProvider>
       </MemoryRouter>
     )
   }

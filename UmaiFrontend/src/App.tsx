@@ -5,6 +5,7 @@ import { AuthProvider } from './auth/AuthContext'
 import { RequireAuth } from './auth/RequireAuth'
 import { AppLayout } from './components/layout/AppLayout'
 import { LoadingState } from './components/ui/States'
+import { LanguageProvider } from './i18n/LanguageContext'
 import { HomePage } from './pages/HomePage'
 
 /*
@@ -15,6 +16,9 @@ import { HomePage } from './pages/HomePage'
  * Everything else is loaded on demand so a first visit does not pay for screens it may
  * never open.
  */
+const RestaurantsPage = lazy(() =>
+  import('./pages/RestaurantsPage').then((m) => ({ default: m.RestaurantsPage })),
+)
 const RestaurantDetailPage = lazy(() =>
   import('./pages/RestaurantDetailPage').then((m) => ({ default: m.RestaurantDetailPage })),
 )
@@ -41,43 +45,46 @@ function LazyRoutes() {
 function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <Routes>
-          <Route element={<AppLayout />}>
-            <Route element={<LazyRoutes />}>
-              <Route path="/" element={<HomePage />} />
-              {/* Folded into the map-first home. Redirect old links rather than 404. */}
-              <Route path="/map" element={<Navigate to="/" replace />} />
-              <Route path="/search" element={<Navigate to="/" replace />} />
-              <Route path="/categories" element={<Navigate to="/" replace />} />
-              <Route path="/restaurants/:id" element={<RestaurantDetailPage />} />
-              <Route path="/login" element={<LoginPage />} />
+      <LanguageProvider>
+        <AuthProvider>
+          <Routes>
+            <Route element={<AppLayout />}>
+              <Route element={<LazyRoutes />}>
+                <Route path="/" element={<HomePage />} />
+                {/* Folded into the map-first home. Redirect old links rather than 404. */}
+                <Route path="/map" element={<Navigate to="/" replace />} />
+                <Route path="/search" element={<Navigate to="/" replace />} />
+                <Route path="/categories" element={<Navigate to="/" replace />} />
+                <Route path="/restaurants" element={<RestaurantsPage />} />
+                <Route path="/restaurants/:id" element={<RestaurantDetailPage />} />
+                <Route path="/login" element={<LoginPage />} />
 
-              {/* Submitting a restaurant requires an account. */}
-              <Route
-                path="/restaurants/new"
-                element={
-                  <RequireAuth>
-                    <SubmitRestaurantPage />
-                  </RequireAuth>
-                }
-              />
+                {/* Submitting a restaurant requires an account. */}
+                <Route
+                  path="/restaurants/new"
+                  element={
+                    <RequireAuth>
+                      <SubmitRestaurantPage />
+                    </RequireAuth>
+                  }
+                />
 
-              {/* Moderation is further restricted to administrators. */}
-              <Route
-                path="/moderation"
-                element={
-                  <RequireAuth requireAdmin>
-                    <ModerationPage />
-                  </RequireAuth>
-                }
-              />
+                {/* Moderation is further restricted to administrators. */}
+                <Route
+                  path="/moderation"
+                  element={
+                    <RequireAuth requireAdmin>
+                      <ModerationPage />
+                    </RequireAuth>
+                  }
+                />
 
-              <Route path="*" element={<NotFoundPage />} />
+                <Route path="*" element={<NotFoundPage />} />
+              </Route>
             </Route>
-          </Route>
-        </Routes>
-      </AuthProvider>
+          </Routes>
+        </AuthProvider>
+      </LanguageProvider>
     </BrowserRouter>
   )
 }

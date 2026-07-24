@@ -5,7 +5,9 @@ import { useEffect } from 'react'
 
 import { NAV_ITEMS } from '../../lib/navigation'
 import { useAuth } from '../../auth/useAuth'
+import { useLanguage } from '../../i18n/useLanguage'
 import { Icon } from '../ui/Icon'
+import { Mascot } from '../ui/Mascot'
 
 /**
  * Site header with responsive navigation: inline links on desktop, a disclosure
@@ -24,10 +26,13 @@ export function SiteHeader() {
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3.5">
         <Link
           to="/"
-          className="flex shrink-0 items-center gap-2.5 rounded-pill py-1 transition-colors hover:text-leaf-600"
+          className="group flex shrink-0 items-center gap-2 rounded-pill py-1 transition-colors hover:text-leaf-600"
         >
-          <LeafMark />
-          <span className="font-display text-xl tracking-wide">Umai</span>
+          <Mascot
+            size={36}
+            className="shrink-0 transition-transform duration-300 ease-out group-hover:-rotate-6 group-hover:scale-110"
+          />
+          <span className="font-display text-2xl tracking-wide">Umai</span>
         </Link>
 
         <nav aria-label="メインナビゲーション" className="hidden items-center gap-1 md:flex">
@@ -48,6 +53,8 @@ export function SiteHeader() {
         </nav>
 
         <div className="flex items-center gap-2">
+          <LanguageToggle className="hidden sm:flex" />
+
           <Link
             to="/restaurants/new"
             aria-label="レストラン追加"
@@ -120,6 +127,10 @@ export function SiteHeader() {
             className="overflow-hidden border-t border-cream-200 bg-cream-50 md:hidden"
           >
             <ul className="mx-auto max-w-6xl px-5 py-3">
+              <li className="border-b border-cream-200 pb-2">
+                <LanguageToggle className="flex w-fit" />
+              </li>
+
               {[
                 ...NAV_ITEMS,
                 { to: '/restaurants/new', label: 'レストラン追加', icon: 'plus' as const },
@@ -161,6 +172,90 @@ export function SiteHeader() {
   )
 }
 
+// Track/thumb geometry, shared between the JSX below and the drag-distance math —
+// kept as constants (not measured at runtime) so the two never drift out of sync.
+// Sized to fit the full "日本語" label (not an abbreviation) inside the thumb.
+const TRACK_PADDING = 3
+const THUMB_WIDTH = 54
+const THUMB_HEIGHT = 26
+const TRACK_WIDTH = THUMB_WIDTH * 2 + TRACK_PADDING * 2
+const THUMB_TRAVEL = TRACK_WIDTH - TRACK_PADDING * 2 - THUMB_WIDTH
+
+/**
+ * A tiny sliding switch: click anywhere, or grab the thumb and drag it to the other
+ * side. Both gestures live on the same element — Framer Motion's tap and drag
+ * recognizers already disambiguate a real drag (movement past a few px) from a plain
+ * click, so there is no risk of a drag-release also firing a click-to-toggle.
+ */
+function LanguageToggle({ className = '' }: { className?: string }) {
+  const { lang, setLang, t } = useLanguage()
+  const isEn = lang === 'en'
+
+  function settleAfterDrag(offsetX: number) {
+    const finalX = (isEn ? THUMB_TRAVEL : 0) + offsetX
+    setLang(finalX > THUMB_TRAVEL / 2 ? 'en' : 'ja')
+  }
+
+  return (
+    <div
+      onClick={() => setLang(isEn ? 'ja' : 'en')}
+      style={{ width: TRACK_WIDTH, padding: TRACK_PADDING }}
+      className={`relative cursor-pointer items-center rounded-pill border-2 border-bark-400/30 shadow-soft transition-colors duration-300 ${
+        isEn ? 'bg-leaf-50' : 'bg-cream-100'
+      } ${className}`}
+    >
+      <span
+        style={{ width: THUMB_WIDTH }}
+        className={`pointer-events-none absolute left-0 top-1/2 -translate-y-1/2 text-center text-[11px] font-bold text-bark-500 transition-opacity ${
+          isEn ? 'opacity-60' : 'opacity-0'
+        }`}
+      >
+        日本語
+      </span>
+      <span
+        style={{ width: THUMB_WIDTH }}
+        className={`pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 text-center text-[11px] font-bold text-leaf-700 transition-opacity ${
+          isEn ? 'opacity-0' : 'opacity-60'
+        }`}
+      >
+        EN
+      </span>
+
+      <motion.div
+        role="switch"
+        aria-checked={isEn}
+        aria-label={isEn ? t.languageToggle.switchToJa : t.languageToggle.switchToEn}
+        tabIndex={0}
+        drag="x"
+        dragConstraints={{ left: 0, right: THUMB_TRAVEL }}
+        dragElastic={0.1}
+        dragMomentum={false}
+        animate={{ x: isEn ? THUMB_TRAVEL : 0 }}
+        transition={{ type: 'spring', stiffness: 500, damping: 32 }}
+        onDragEnd={(_, info) => settleAfterDrag(info.offset.x)}
+        onClick={(event) => {
+          // The track's own onClick already toggles; stop this from bubbling into
+          // it and firing a second (harmless but redundant) update.
+          event.stopPropagation()
+          setLang(isEn ? 'ja' : 'en')
+        }}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault()
+            setLang(isEn ? 'ja' : 'en')
+          }
+        }}
+        whileHover={{ scale: 1.04 }}
+        whileTap={{ scale: 0.92 }}
+        style={{ width: THUMB_WIDTH, height: THUMB_HEIGHT }}
+        className="relative z-10 flex cursor-grab items-center justify-center rounded-pill bg-leaf-500 text-[11px] font-bold text-white shadow-soft active:cursor-grabbing"
+      >
+        {isEn ? 'EN' : '日本語'}
+      </motion.div>
+    </div>
+  )
+}
+
 function PlusIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="size-4">
@@ -189,23 +284,5 @@ function LogoutIcon() {
         strokeLinejoin="round"
       />
     </svg>
-  )
-}
-
-function LeafMark() {
-  return (
-    <span
-      aria-hidden="true"
-      className="flex size-9 items-center justify-center rounded-pill bg-leaf-100 text-leaf-600"
-    >
-      <svg viewBox="0 0 24 24" fill="none" className="size-5">
-        <path
-          d="M20 4c0 9-5.5 14-12 14-1 0-2-.2-2.8-.5C6 11 11 6.5 20 4Z"
-          fill="currentColor"
-          opacity="0.9"
-        />
-        <path d="M4 20c1-4.5 3.5-8 7.5-10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-      </svg>
-    </span>
   )
 }

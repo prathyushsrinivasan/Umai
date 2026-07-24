@@ -8,6 +8,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
@@ -23,8 +24,12 @@ import com.umai.backend.integration.photo.PlacePhotoProvider;
  *
  * <p>Never throws to callers: any network or parsing failure is logged and yields no
  * photo, so a single bad lookup cannot abort a backfill run.
+ *
+ * <p>Runs last in the backfill order — this one needs an API key and counts against a
+ * rate limit, so the free Wikimedia sources get first crack at every restaurant.
  */
 @Component
+@Order(3)
 public class FoursquarePhotoProvider implements PlacePhotoProvider {
 
 	private static final Logger log = LoggerFactory.getLogger(FoursquarePhotoProvider.class);

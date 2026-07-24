@@ -102,6 +102,16 @@
 			<artifactId>postgresql</artifactId>
 			<scope>runtime</scope>
 		</dependency>
+
+		<!-- Japanese morphological analysis (dictionary-based tokenizing + reading
+		     lookup), used to romanize restaurant names/addresses for English-mode
+		     display. Its IPADIC dictionary ships inside the jar, so this needs no
+		     download or setup at runtime beyond the dependency itself. -->
+		<dependency>
+			<groupId>com.atilika.kuromoji</groupId>
+			<artifactId>kuromoji-ipadic</artifactId>
+			<version>0.9.0</version>
+		</dependency>
 		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>

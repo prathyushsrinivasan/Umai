@@ -10,6 +10,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.umai.backend.area.Area;
+import com.umai.backend.area.AreaMatcher;
+import com.umai.backend.area.AreaRepository;
 import com.umai.backend.category.Category;
 import com.umai.backend.category.CategoryRepository;
 import com.umai.backend.restaurant.MapBounds;
@@ -36,12 +39,19 @@ public class RestaurantImportService {
 
 	private final CategoryRepository categoryRepository;
 
+	private final AreaRepository areaRepository;
+
+	private final AreaMatcher areaMatcher;
+
 	private final List<RestaurantDataProvider> providers;
 
 	public RestaurantImportService(RestaurantRepository restaurantRepository,
-			CategoryRepository categoryRepository, List<RestaurantDataProvider> providers) {
+			CategoryRepository categoryRepository, AreaRepository areaRepository,
+			AreaMatcher areaMatcher, List<RestaurantDataProvider> providers) {
 		this.restaurantRepository = restaurantRepository;
 		this.categoryRepository = categoryRepository;
+		this.areaRepository = areaRepository;
+		this.areaMatcher = areaMatcher;
 		this.providers = providers;
 	}
 
@@ -62,6 +72,7 @@ public class RestaurantImportService {
 
 		Map<String, Category> categoriesBySlug = categoryRepository.findAll().stream()
 			.collect(Collectors.toMap(Category::getSlug, Function.identity()));
+		List<Area> areas = areaRepository.findAll();
 
 		int created = 0;
 		int updated = 0;
@@ -72,7 +83,7 @@ public class RestaurantImportService {
 				.findBySourceAndSourceExternalId(external.source(), external.externalId());
 
 			if (existing.isPresent()) {
-				if (applyUpdate(existing.get(), external, categoriesBySlug)) {
+				if (applyUpdate(existing.get(), external, categoriesBySlug, areas)) {
 					updated++;
 				}
 				else {
@@ -80,7 +91,7 @@ public class RestaurantImportService {
 				}
 			}
 			else {
-				restaurantRepository.save(toEntity(external, categoriesBySlug));
+				restaurantRepository.save(toEntity(external, categoriesBySlug, areas));
 				created++;
 			}
 		}
@@ -90,7 +101,7 @@ public class RestaurantImportService {
 		return result;
 	}
 
-	private Restaurant toEntity(ExternalRestaurant external, Map<String, Category> categoriesBySlug) {
+	private Restaurant toEntity(ExternalRestaurant external, Map<String, Category> categoriesBySlug, List<Area> areas) {
 		Restaurant restaurant = new Restaurant(
 			external.name(),
 			external.latitude(),
@@ -102,6 +113,7 @@ public class RestaurantImportService {
 		restaurant.setStatus(RestaurantStatus.PUBLISHED);
 		copyOptionalFields(restaurant, external);
 		applyCategories(restaurant, external, categoriesBySlug);
+		assignAreaIfMissing(restaurant, areas);
 
 		return restaurant;
 	}
@@ -112,7 +124,7 @@ public class RestaurantImportService {
 	 * @return false when the record was left alone
 	 */
 	private boolean applyUpdate(Restaurant restaurant, ExternalRestaurant external,
-			Map<String, Category> categoriesBySlug) {
+			Map<String, Category> categoriesBySlug, List<Area> areas) {
 
 		// A record a moderator rejected must not silently reappear on the next import.
 		if (restaurant.getStatus() == RestaurantStatus.REJECTED) {
@@ -131,7 +143,20 @@ public class RestaurantImportService {
 
 		copyOptionalFields(restaurant, external);
 		applyCategories(restaurant, external, categoriesBySlug);
+		assignAreaIfMissing(restaurant, areas);
 		return true;
+	}
+
+	/**
+	 * OSM almost never tags a Tokyo neighbourhood directly, so area comes from matching
+	 * the address text instead (see {@link AreaMatcher}). Never overwrites an area a
+	 * moderator or another source already set.
+	 */
+	private void assignAreaIfMissing(Restaurant restaurant, List<Area> areas) {
+		if (restaurant.getArea() != null) {
+			return;
+		}
+		areaMatcher.match(restaurant.getAddress(), areas).ifPresent(restaurant::setArea);
 	}
 
 	/**
