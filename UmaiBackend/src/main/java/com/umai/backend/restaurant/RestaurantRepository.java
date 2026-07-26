@@ -41,6 +41,11 @@ public interface RestaurantRepository extends JpaRepository<Restaurant, Long>, J
 
 	long countByStatusAndImageUrlIsNull(RestaurantStatus status);
 
+	/** Published restaurants the Google enrichment job hasn't processed yet. */
+	Page<Restaurant> findByStatusAndGoogleEnrichedFalse(RestaurantStatus status, Pageable pageable);
+
+	long countByStatusAndGoogleEnrichedFalse(RestaurantStatus status);
+
 	/** Used on re-import to update an existing record rather than duplicate it. */
 	Optional<Restaurant> findBySourceAndSourceExternalId(RestaurantSource source, String sourceExternalId);
 

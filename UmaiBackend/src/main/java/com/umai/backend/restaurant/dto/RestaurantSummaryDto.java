@@ -32,5 +32,7 @@ public record RestaurantSummaryDto(
 		@Schema(nullable = true) AreaDto area,
 		List<CategoryDto> categories,
 		@Schema(nullable = true, description = "レビューがない場合は null") Double averageRating,
-		long reviewCount) {
+		long reviewCount,
+		@Schema(nullable = true, description = "Google の平均評価（自前レビューがない店舗のフォールバック）") Double googleRating,
+		@Schema(nullable = true) Integer googleRatingCount) {
 }

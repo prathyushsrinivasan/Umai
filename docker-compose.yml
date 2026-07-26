@@ -42,6 +42,11 @@ services:
       UMAI_ADMIN_EMAILS: ${UMAI_ADMIN_EMAILS:-}
       # Optional: enables real restaurant photos (admin backfill). Empty = disabled.
       FOURSQUARE_API_KEY: ${FOURSQUARE_API_KEY:-}
+      # Optional: Google Places API (New) key. Enables admin enrichment (details + live
+      # cover photos) at /api/v1/admin/google. Empty = disabled.
+      GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY:-}
+      # Set true to run the Google enrichment once on startup (no admin login needed).
+      UMAI_GOOGLE_ENRICH_ON_START: ${UMAI_GOOGLE_ENRICH_ON_START:-false}
     ports:
       - '${BACKEND_PORT:-8080}:8080'
     healthcheck:

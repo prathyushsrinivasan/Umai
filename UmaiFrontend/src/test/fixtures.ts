@@ -19,6 +19,8 @@ export function makeRestaurant(overrides: Partial<RestaurantSummary> = {}): Rest
     categories: [{ id: 1, slug: 'washoku', nameJa: '和食', description: null }],
     averageRating: 4.6,
     reviewCount: 18,
+    googleRating: null,
+    googleRatingCount: null,
     ...overrides,
   }
 }

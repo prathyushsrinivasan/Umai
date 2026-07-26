@@ -79,6 +79,19 @@ umai:
     match-radius-meters: ${FOURSQUARE_MATCH_RADIUS:150}
     timeout: ${FOURSQUARE_TIMEOUT:10s}
 
+  google:
+    # Google Places API (New). Enables the admin enrichment endpoint, which matches
+    # restaurants to Google, fills missing details, and serves cover photos live (Google's
+    # terms forbid storing their photos). Disabled until an API key is set.
+    api-key: ${GOOGLE_MAPS_API_KEY:}
+    endpoint: ${GOOGLE_PLACES_ENDPOINT:https://places.googleapis.com/v1}
+    match-radius-meters: ${GOOGLE_MATCH_RADIUS:120}
+    photo-max-width: ${GOOGLE_PHOTO_MAX_WIDTH:800}
+    timeout: ${GOOGLE_TIMEOUT:10s}
+    # Run the full enrichment once on startup (no admin/token needed). Handy for a
+    # local one-off; leave false in any real deployment and use the admin endpoint.
+    enrich-on-start: ${UMAI_GOOGLE_ENRICH_ON_START:false}
+
   submissions:
     # MVP: user submissions go live immediately. Set to false to route them to
     # PENDING instead, once a moderation queue exists.

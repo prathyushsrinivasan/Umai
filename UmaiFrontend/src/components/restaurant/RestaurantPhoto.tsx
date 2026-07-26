@@ -2,7 +2,7 @@ import { useState } from 'react'
 
 import { categoryLabel } from '../../i18n/dataLabels'
 import { useLanguage } from '../../i18n/useLanguage'
-import { Icon } from '../ui/Icon'
+import { Mascot } from '../ui/Mascot'
 import type { Category } from '../../types/restaurant'
 
 interface RestaurantPhotoProps {
@@ -36,12 +36,10 @@ export function RestaurantPhoto({ imageUrl, name, categories, className = 'h-48 
         alt={name}
         loading="lazy"
         onError={() => setFailed(true)}
-        // object-bottom, not the object-cover default of center: these are almost all
-        // building-exterior shots taken from street level, so the storefront and
-        // entrance — the part that actually identifies the restaurant — sits low in
-        // the frame, with sky/upper floors above it. Centering the crop cuts off
-        // exactly the part a small thumbnail most needs to show.
-        className={`object-cover object-bottom ${className}`}
+        // Centre-crop: photos now come from Google Places (food, interiors, storefronts),
+        // so the subject sits in the middle of the frame rather than low like the old
+        // street-level shots did.
+        className={`object-cover object-center ${className}`}
       />
     )
   }
@@ -50,10 +48,10 @@ export function RestaurantPhoto({ imageUrl, name, categories, className = 'h-48 
   return (
     <div
       aria-hidden="true"
-      className={`flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-leaf-100 via-leaf-50 to-cream-100 ${className}`}
+      className={`flex flex-col items-center justify-center gap-1.5 bg-gradient-to-br from-leaf-100 via-leaf-50 to-cream-100 ${className}`}
     >
-      <Icon name="leaf" className="size-10 text-leaf-400" />
-      <span className="px-4 text-center text-sm font-medium text-leaf-700/80">{cuisine ?? name}</span>
+      <Mascot mood="happy" size={34} />
+      <span className="px-3 text-center text-xs font-medium text-leaf-700/80">{cuisine ?? name}</span>
     </div>
   )
 }

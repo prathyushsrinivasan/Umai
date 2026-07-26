@@ -52,6 +52,9 @@ export interface RestaurantSummary {
   /** Null when the restaurant has no reviews — not zero. */
   averageRating: number | null
   reviewCount: number
+  /** Google's average rating, shown as a fallback when there are no local reviews. */
+  googleRating: number | null
+  googleRatingCount: number | null
 }
 
 /** Full restaurant record for the detail screen. */
@@ -59,6 +62,8 @@ export interface RestaurantDetail extends RestaurantSummary {
   websiteUrl: string | null
   phone: string | null
   openingHours: string | null
+  /** Google Places ID, for deep-linking to the map/menu. */
+  googlePlaceId: string | null
   tags: Tag[]
   source: RestaurantSource
   createdAt: string

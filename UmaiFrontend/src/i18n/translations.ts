@@ -5,7 +5,6 @@ export type Language = 'ja' | 'en'
 export interface Translations {
   home: {
     title: string
-    subtitle: string
     searchPlaceholder: string
     searchAriaLabel: string
     all: string
@@ -16,16 +15,23 @@ export interface Translations {
     browseAllCta: string
     resultsAriaLabel: string
     mapAriaLabel: string
+    resetMap: string
     updating: string
     truncatedNotice: string
-    truncatedSearchNotice: string
     noResultsFiltered: string
     noResultsInBounds: string
     noResultsSearch: string
     detailCta: string
+    markerCta: string
+    branches: (count: number) => string
   }
   vegetarianType: Record<VegetarianType, string>
   priceRange: Record<PriceRange, string>
+  rating: {
+    none: string
+    google: string
+    reviews: (count: number) => string
+  }
   states: {
     loading: string
     error: string
@@ -53,6 +59,8 @@ export interface Translations {
     price: string
     phone: string
     website: string
+    menuOnGoogle: string
+    branchesHeading: (count: number) => string
     noContactInfo: string
     seedNotice: string
     notFoundTitle: string
@@ -89,25 +97,26 @@ export interface Translations {
 export const translations: Record<Language, Translations> = {
   ja: {
     home: {
-      title: '東京のベジ・ヴィーガンを地図で',
-      subtitle: '地図を動かすと、その範囲のお店が一覧に出ます',
-      searchPlaceholder: '店名・料理・エリアで絞り込む',
+      title: '東京のベジ・ヴィーガン',
+      searchPlaceholder: '店名・料理・エリアで探す',
       searchAriaLabel: 'キーワードで絞り込む',
       all: 'すべて',
-      categoryAll: 'すべてのジャンル',
+      categoryAll: 'ジャンル',
       categoryAriaLabel: 'ジャンルで絞り込む',
       resultsHeading: 'この範囲のお店',
       searchResultsHeading: '検索結果',
-      browseAllCta: 'すべてのお店を見る・絞り込む',
+      browseAllCta: 'すべて見る',
       resultsAriaLabel: '表示範囲内のお店',
       mapAriaLabel: '東京のレストラン地図',
+      resetMap: '東京全体',
       updating: '更新中…',
-      truncatedNotice: '一部のみ表示しています（拡大で絞り込み）',
-      truncatedSearchNotice: '一部のみ表示しています（絞り込むと見つけやすくなります）',
-      noResultsFiltered: '条件に合うお店が範囲内にありません',
-      noResultsInBounds: 'この範囲にお店が見つかりませんでした',
-      noResultsSearch: '東京都内に該当するお店が見つかりませんでした',
+      truncatedNotice: '一部のみ表示（拡大で絞り込み）',
+      noResultsFiltered: '条件に合うお店がありません',
+      noResultsInBounds: 'この範囲にお店がありません',
+      noResultsSearch: '該当するお店が見つかりません',
       detailCta: '詳細',
+      markerCta: '見てみる',
+      branches: (count: number) => `${count}店舗`,
     },
     vegetarianType: {
       VEGAN_ONLY: 'ヴィーガン専門',
@@ -120,6 +129,11 @@ export const translations: Record<Language, Translations> = {
       BUDGET: '〜1,000円',
       MODERATE: '1,000〜3,000円',
       EXPENSIVE: '3,000円〜',
+    },
+    rating: {
+      none: '評価はまだありません',
+      google: 'Google',
+      reviews: (count: number) => `${count}件`,
     },
     states: {
       loading: '読み込み中…',
@@ -148,6 +162,8 @@ export const translations: Record<Language, Translations> = {
       price: '価格帯',
       phone: '電話番号',
       website: 'Webサイト',
+      menuOnGoogle: 'メニューを見る（Googleマップ）',
+      branchesHeading: (count: number) => `他の店舗（${count}）`,
       noContactInfo: '営業時間・電話番号・Webサイトの情報はまだ登録されていません。',
       seedNotice: '※ このお店は開発用のサンプルデータです。',
       notFoundTitle: 'お店が見つかりませんでした',
@@ -182,25 +198,26 @@ export const translations: Record<Language, Translations> = {
   },
   en: {
     home: {
-      title: 'Find veg & vegan spots in Tokyo',
-      subtitle: 'Move the map to see restaurants in that area',
+      title: 'Veg & vegan in Tokyo',
       searchPlaceholder: 'Search by name, cuisine, or area',
       searchAriaLabel: 'Filter by keyword',
       all: 'All',
-      categoryAll: 'All cuisines',
+      categoryAll: 'Cuisine',
       categoryAriaLabel: 'Filter by cuisine',
-      resultsHeading: 'Restaurants in view',
-      searchResultsHeading: 'Search results',
-      browseAllCta: 'Browse & filter all restaurants',
+      resultsHeading: 'In view',
+      searchResultsHeading: 'Results',
+      browseAllCta: 'Browse all',
       resultsAriaLabel: 'Restaurants in the visible area',
       mapAriaLabel: 'Map of Tokyo restaurants',
+      resetMap: 'Reset',
       updating: 'Updating…',
-      truncatedNotice: 'Showing only some results — zoom in to narrow it down',
-      truncatedSearchNotice: 'Showing only some matches — narrow your search to see more precisely',
-      noResultsFiltered: 'No restaurants match your filters in this area',
-      noResultsInBounds: 'No restaurants found in this area',
-      noResultsSearch: 'No restaurants in Tokyo match your search',
+      truncatedNotice: 'Showing some — zoom in for more',
+      noResultsFiltered: 'No matches in this area',
+      noResultsInBounds: 'No restaurants in this area',
+      noResultsSearch: 'No matches in Tokyo',
       detailCta: 'Details',
+      markerCta: 'Take a look',
+      branches: (count: number) => (count === 1 ? '1 branch' : `${count} branches`),
     },
     vegetarianType: {
       VEGAN_ONLY: 'Vegan only',
@@ -213,6 +230,11 @@ export const translations: Record<Language, Translations> = {
       BUDGET: 'Under ¥1,000',
       MODERATE: '¥1,000–3,000',
       EXPENSIVE: '¥3,000+',
+    },
+    rating: {
+      none: 'No ratings yet',
+      google: 'Google',
+      reviews: (count: number) => `${count} reviews`,
     },
     states: {
       loading: 'Loading…',
@@ -241,6 +263,8 @@ export const translations: Record<Language, Translations> = {
       price: 'Price range',
       phone: 'Phone',
       website: 'Website',
+      menuOnGoogle: 'See the menu on Google Maps',
+      branchesHeading: (count: number) => (count === 1 ? 'Another branch' : `Other branches (${count})`),
       noContactInfo: 'Hours, phone, and website haven’t been added yet.',
       seedNotice: '※ This restaurant is development sample data.',
       notFoundTitle: 'Restaurant not found',

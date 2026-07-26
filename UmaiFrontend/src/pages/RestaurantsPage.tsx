@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { fetchAreas, fetchCategories, searchRestaurants } from '../api/restaurants'
@@ -11,10 +11,14 @@ import { useAsync } from '../hooks/useAsync'
 import { areaLabel, categoryLabel } from '../i18n/dataLabels'
 import { useLanguage } from '../i18n/useLanguage'
 import { useRomanized } from '../i18n/useRomanized'
+import { groupByName } from '../lib/chains'
 import { FILTERABLE_VEGETARIAN_TYPES, PRICE_RANGES, VEGETARIAN_TYPE_STYLES } from '../lib/labels'
 import type { PriceRange, RestaurantSummary, VegetarianType } from '../types/restaurant'
 
 const PAGE_SIZE = 24
+// Chains are grouped client-side, so the whole matching set is fetched at once and
+// paginated here — the dataset is small enough (a few hundred) for this to be cheap.
+const FETCH_LIMIT = 500
 const RATING_OPTIONS = [4, 4.5] as const
 
 function toggle<T>(list: T[], value: T): T[] {
@@ -63,14 +67,18 @@ export function RestaurantsPage() {
           areas: areaSlugs.length ? areaSlugs : undefined,
           priceRanges: priceRanges.length ? priceRanges : undefined,
           minRating: minRating ?? undefined,
-          page,
-          size: PAGE_SIZE,
+          size: FETCH_LIMIT,
         },
         signal,
       ),
-    [debouncedKeyword, dietTypes, categorySlugs, areaSlugs, priceRanges, minRating, page],
+    [debouncedKeyword, dietTypes, categorySlugs, areaSlugs, priceRanges, minRating],
   )
   const results = useAsync(loadResults)
+
+  // Collapse chains to one entry, then paginate the unique list client-side.
+  const groups = useMemo(() => groupByName(results.data?.content ?? []), [results.data])
+  const totalPages = Math.max(1, Math.ceil(groups.length / PAGE_SIZE))
+  const pageGroups = groups.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE)
 
   const hasActiveFilters = Boolean(
     debouncedKeyword || dietTypes.length || categorySlugs.length || areaSlugs.length || priceRanges.length || minRating,
@@ -194,38 +202,38 @@ export function RestaurantsPage() {
 
         {results.data && !results.loading && !results.error && (
           <>
-            <p className="text-sm text-bark-400">{t.browsePage.resultCount(results.data.totalElements)}</p>
+            <p className="text-sm text-bark-400">{t.browsePage.resultCount(groups.length)}</p>
 
-            {results.data.content.length === 0 ? (
+            {pageGroups.length === 0 ? (
               <div className="mt-4">
                 <EmptyState title={t.browsePage.noResults} />
               </div>
             ) : (
               <ul className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {results.data.content.map((restaurant) => (
-                  <li key={restaurant.id}>
-                    <BrowseCard restaurant={restaurant} />
+                {pageGroups.map((group) => (
+                  <li key={group.representative.id}>
+                    <BrowseCard restaurant={group.representative} branchCount={group.members.length} />
                   </li>
                 ))}
               </ul>
             )}
 
-            {results.data.totalPages > 1 && (
+            {totalPages > 1 && (
               <div className="mt-6 flex items-center justify-center gap-4">
                 <button
                   type="button"
-                  disabled={results.data.first}
+                  disabled={page === 0}
                   onClick={() => setPage((current) => current - 1)}
                   className="cursor-pointer rounded-pill border border-cream-300 bg-white px-4 py-2 text-sm text-bark-600 transition-colors hover:border-leaf-300 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   {t.browsePage.previous}
                 </button>
                 <span className="text-sm text-bark-400">
-                  {t.browsePage.pageOf(results.data.page + 1, results.data.totalPages)}
+                  {t.browsePage.pageOf(page + 1, totalPages)}
                 </span>
                 <button
                   type="button"
-                  disabled={results.data.last}
+                  disabled={page >= totalPages - 1}
                   onClick={() => setPage((current) => current + 1)}
                   className="cursor-pointer rounded-pill border border-cream-300 bg-white px-4 py-2 text-sm text-bark-600 transition-colors hover:border-leaf-300 disabled:cursor-not-allowed disabled:opacity-40"
                 >
@@ -249,7 +257,7 @@ function FilterGroup({ heading, children }: { heading: string; children: React.R
   )
 }
 
-function BrowseCard({ restaurant }: { restaurant: RestaurantSummary }) {
+function BrowseCard({ restaurant, branchCount }: { restaurant: RestaurantSummary; branchCount: number }) {
   const { lang, t } = useLanguage()
   const name = useRomanized(restaurant.name)
 
@@ -265,12 +273,19 @@ function BrowseCard({ restaurant }: { restaurant: RestaurantSummary }) {
         className="h-36 w-full"
       />
       <div className="flex flex-1 flex-col gap-2 p-4">
-        <span
-          className={`inline-block w-fit rounded-pill px-2.5 py-0.5 text-xs font-medium ${VEGETARIAN_TYPE_STYLES[restaurant.vegetarianType]}`}
-        >
-          {t.vegetarianType[restaurant.vegetarianType]}
-        </span>
-        <span className="font-medium text-bark-800">{name}</span>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span
+            className={`inline-block w-fit rounded-pill px-2.5 py-0.5 text-xs font-medium ${VEGETARIAN_TYPE_STYLES[restaurant.vegetarianType]}`}
+          >
+            {t.vegetarianType[restaurant.vegetarianType]}
+          </span>
+          {branchCount > 1 && (
+            <span className="rounded-pill bg-apricot-300/40 px-2 py-0.5 text-[11px] font-medium text-bark-600">
+              {t.home.branches(branchCount)}
+            </span>
+          )}
+        </div>
+        <span className="font-display text-bark-800">{name}</span>
         {restaurant.area && (
           <span className="flex items-center gap-1 text-xs text-bark-400">
             <Icon name="pin" className="size-3.5 shrink-0" />
@@ -283,7 +298,12 @@ function BrowseCard({ restaurant }: { restaurant: RestaurantSummary }) {
           </span>
         )}
         <div className="mt-auto pt-1">
-          <Rating averageRating={restaurant.averageRating} reviewCount={restaurant.reviewCount} />
+          <Rating
+            averageRating={restaurant.averageRating}
+            reviewCount={restaurant.reviewCount}
+            googleRating={restaurant.googleRating}
+            googleRatingCount={restaurant.googleRatingCount}
+          />
         </div>
       </div>
     </Link>

@@ -35,7 +35,9 @@ public class RestaurantMapper {
 			restaurant.getArea() == null ? null : AreaDto.from(restaurant.getArea()),
 			toCategoryDtos(restaurant),
 			rating.averageRating(),
-			rating.reviewCount());
+			rating.reviewCount(),
+			restaurant.getGoogleRating(),
+			restaurant.getGoogleRatingCount());
 	}
 
 	public RestaurantDetailDto toDetail(Restaurant restaurant, RatingSummary rating) {
@@ -62,6 +64,9 @@ public class RestaurantMapper {
 			tags,
 			rating.averageRating(),
 			rating.reviewCount(),
+			restaurant.getGoogleRating(),
+			restaurant.getGoogleRatingCount(),
+			restaurant.getGooglePlaceId(),
 			restaurant.getSource(),
 			restaurant.getCreatedAt(),
 			restaurant.getUpdatedAt());

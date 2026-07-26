@@ -35,6 +35,7 @@ describe('SubmitRestaurantPage', () => {
       websiteUrl: null,
       phone: null,
       openingHours: null,
+      googlePlaceId: null,
       tags: [],
       source: 'USER_SUBMISSION',
       createdAt: '2026-07-01T00:00:00Z',

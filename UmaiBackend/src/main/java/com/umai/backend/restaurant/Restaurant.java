@@ -119,6 +119,30 @@ public class Restaurant extends Auditable {
 	@Column(name = "image_url", length = 1000)
 	private String imageUrl;
 
+	/**
+	 * Google Places identifier for this restaurant, when it has been matched. Google's
+	 * terms allow storing the place id indefinitely; photos and other details are fetched
+	 * live against it rather than stored.
+	 */
+	@Size(max = 128)
+	@Column(name = "google_place_id", length = 128)
+	private String googlePlaceId;
+
+	/** Google's average star rating, shown when the restaurant has no reviews of its own. */
+	@Column(name = "google_rating")
+	private Double googleRating;
+
+	/** How many Google ratings back {@link #googleRating}. */
+	@Column(name = "google_rating_count")
+	private Integer googleRatingCount;
+
+	/**
+	 * Whether the Google enrichment job has processed this row yet. Set once, regardless of
+	 * whether a match was found, so enrichment never retries the same row indefinitely.
+	 */
+	@Column(name = "google_enriched", nullable = false)
+	private boolean googleEnriched = false;
+
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "area_id")
 	private Area area;
@@ -289,6 +313,38 @@ public class Restaurant extends Auditable {
 
 	public void setImageUrl(String imageUrl) {
 		this.imageUrl = imageUrl;
+	}
+
+	public String getGooglePlaceId() {
+		return googlePlaceId;
+	}
+
+	public void setGooglePlaceId(String googlePlaceId) {
+		this.googlePlaceId = googlePlaceId;
+	}
+
+	public Double getGoogleRating() {
+		return googleRating;
+	}
+
+	public void setGoogleRating(Double googleRating) {
+		this.googleRating = googleRating;
+	}
+
+	public Integer getGoogleRatingCount() {
+		return googleRatingCount;
+	}
+
+	public void setGoogleRatingCount(Integer googleRatingCount) {
+		this.googleRatingCount = googleRatingCount;
+	}
+
+	public boolean isGoogleEnriched() {
+		return googleEnriched;
+	}
+
+	public void setGoogleEnriched(boolean googleEnriched) {
+		this.googleEnriched = googleEnriched;
 	}
 
 	public Area getArea() {

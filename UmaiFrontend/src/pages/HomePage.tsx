@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'motion/react'
+import type { Marker as LeafletMarker } from 'leaflet'
 import { MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet'
 import { Link } from 'react-router-dom'
 
@@ -7,9 +8,12 @@ import { fetchCategories, fetchRestaurantsInBounds, searchRestaurants } from '..
 import { MapBoundsWatcher } from '../components/map/MapBoundsWatcher'
 import { RestaurantPhoto } from '../components/restaurant/RestaurantPhoto'
 import { Icon } from '../components/ui/Icon'
+import { Mascot } from '../components/ui/Mascot'
 import { Rating } from '../components/ui/Rating'
 import { EmptyState, ErrorState } from '../components/ui/States'
 import { useAsync } from '../hooks/useAsync'
+import { groupByName } from '../lib/chains'
+import { matchKnownPlace } from '../lib/places'
 import { areaLabel, categoryLabel } from '../i18n/dataLabels'
 import { useLanguage } from '../i18n/useLanguage'
 import { useRomanized } from '../i18n/useRomanized'
@@ -18,8 +22,8 @@ import {
   OSM_TILE_URL,
   TOKYO_CENTER,
   TOKYO_DEFAULT_ZOOM,
-  restaurantIcon,
-  selectedRestaurantIcon,
+  VEGETARIAN_PIN_COLORS,
+  markerIcon,
 } from '../lib/leaflet'
 import { FILTERABLE_VEGETARIAN_TYPES, VEGETARIAN_TYPE_STYLES } from '../lib/labels'
 import type { Category, MapBounds, RestaurantSummary, VegetarianType } from '../types/restaurant'
@@ -27,20 +31,28 @@ import type { Category, MapBounds, RestaurantSummary, VegetarianType } from '../
 /** Keyword search results are capped here — plenty for a results list, no pagination UI. */
 const SEARCH_RESULT_LIMIT = 60
 
+/** Zoom used when focusing a single restaurant from the list or a marker click. */
+const FOCUS_ZOOM = 16
+
+/** Pixels to drop the focused pin below centre, leaving room for its popup above it. */
+const POPUP_OFFSET = 120
+
 /**
  * Home — a map-first view of live Tokyo restaurants. Everything is on one screen:
  * the map, a synchronised list, and inline filters (keyword, diet, cuisine).
  *
- * Two ways results are populated:
+ * Three ways results are populated:
  * - No keyword: panning or zooming re-queries whatever's in the visible map bounds,
  *   and diet/cuisine filters narrow that set client-side.
- * - A keyword is typed: search runs against the *whole* dataset (not just the current
- *   viewport) so typing an address, ward, or restaurant name that happens to be off
- *   in a part of Tokyo the map isn't currently showing still finds it — the map then
- *   flies to fit whatever matched, so the map and list still agree.
+ * - A neighbourhood name (e.g. 秋葉原): the map flies there and viewport mode takes over,
+ *   so you see everything in that area — not just places with the word in their name.
+ * - Any other keyword: search runs against the *whole* dataset and the map flies to fit
+ *   the matches, so the map and list always agree.
  */
 export function HomePage() {
   const { t } = useLanguage()
+  const markerRefs = useRef(new Map<number, LeafletMarker>())
+  const [flyTarget, setFlyTarget] = useState<FlyTarget | null>(null)
   const [bounds, setBounds] = useState<MapBounds | null>(null)
   const [all, setAll] = useState<RestaurantSummary[]>([])
   const [total, setTotal] = useState(0)
@@ -61,15 +73,41 @@ export function HomePage() {
   const requestRef = useRef<AbortController | null>(null)
   const handleBoundsChange = useCallback((next: MapBounds) => setBounds(next), [])
 
+  // Selecting a restaurant (from the list or a marker) centres the map on it and opens
+  // its popup, so the list and the map always agree about what you're looking at. The
+  // fly itself is done by <MapFlyer> (which holds the live map via useMap); we just set
+  // the target. `offset` drops the pin below centre so the popup above it fits.
+  const focusRestaurant = useCallback((restaurant: RestaurantSummary) => {
+    setSelectedId(restaurant.id)
+    markerRefs.current.get(restaurant.id)?.openPopup()
+    setFlyTarget({ lat: restaurant.latitude, lng: restaurant.longitude, zoom: FOCUS_ZOOM, offset: true })
+  }, [])
+
+  // The reset control: back to all of Tokyo, filters cleared.
+  const resetView = useCallback(() => {
+    setKeyword('')
+    setDiet(null)
+    setCategory(null)
+    setSelectedId(null)
+    setFlyTarget({ lat: TOKYO_CENTER[0], lng: TOKYO_CENTER[1], zoom: TOKYO_DEFAULT_ZOOM })
+  }, [])
+
   // Debounced so every keystroke doesn't fire a request.
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedKeyword(keyword.trim()), 350)
     return () => clearTimeout(timer)
   }, [keyword])
 
-  const searching = debouncedKeyword.length > 0
+  // A neighbourhood name flies the map there; viewport mode then loads that area.
+  const geoPlace = useMemo(() => matchKnownPlace(debouncedKeyword), [debouncedKeyword])
+  useEffect(() => {
+    if (geoPlace) setFlyTarget({ lat: geoPlace.center[0], lng: geoPlace.center[1], zoom: geoPlace.zoom })
+  }, [geoPlace])
 
-  // Viewport-driven load — only while there's no active keyword search.
+  const searching = debouncedKeyword.length > 0 && !geoPlace
+
+  // Viewport-driven load — while there's no active keyword search (a neighbourhood match
+  // counts as viewport mode, since it just moves the map).
   useEffect(() => {
     if (searching) return
     if (!bounds) return
@@ -143,19 +181,23 @@ export function HomePage() {
     })
   }, [all, diet, category, searching])
 
+  // Chains (same name, many branches) collapse to one entry in the list; the map still
+  // shows every branch as its own pin.
+  const groups = useMemo(() => groupByName(restaurants), [restaurants])
+
   const activeFilters = Boolean(searching || diet || category)
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-5 sm:px-5">
-      <motion.div
+      <motion.h1
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: 'easeOut' }}
-        className="flex flex-wrap items-baseline gap-x-3 gap-y-1"
+        className="flex items-center gap-2 font-display text-2xl text-bark-800 sm:text-3xl"
       >
-        <h1 className="font-display text-2xl text-bark-800 sm:text-3xl">{t.home.title}</h1>
-        <p className="text-sm text-bark-400">{t.home.subtitle}</p>
-      </motion.div>
+        <Mascot mood="happy" size={40} className="shrink-0 -rotate-6" />
+        {t.home.title}
+      </motion.h1>
 
       <FilterBar
         keyword={keyword}
@@ -172,32 +214,51 @@ export function HomePage() {
           initial={{ opacity: 0, scale: 0.985 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.45, ease: 'easeOut' }}
-          className="hand-drawn crayon-border overflow-hidden shadow-soft"
+          className="hand-drawn crayon-frame relative shadow-soft"
         >
-          <MapContainer
-            center={TOKYO_CENTER}
-            zoom={TOKYO_DEFAULT_ZOOM}
-            scrollWheelZoom
-            style={{ height: 'min(72vh, 680px)', width: '100%' }}
-            aria-label={t.home.mapAriaLabel}
+          <div className="hand-drawn relative overflow-hidden">
+            <MapContainer
+              center={TOKYO_CENTER}
+              zoom={TOKYO_DEFAULT_ZOOM}
+              scrollWheelZoom
+              style={{ height: 'min(72vh, 680px)', width: '100%' }}
+              aria-label={t.home.mapAriaLabel}
+            >
+              <TileLayer url={OSM_TILE_URL} attribution={OSM_ATTRIBUTION} />
+              <MapFlyer target={flyTarget} />
+              <MapBoundsWatcher onBoundsChange={handleBoundsChange} />
+              <MapSearchFitter searching={searching} restaurants={restaurants} />
+              {restaurants.map((restaurant) => (
+                <Marker
+                  key={restaurant.id}
+                  ref={(instance) => {
+                    if (instance) markerRefs.current.set(restaurant.id, instance)
+                    else markerRefs.current.delete(restaurant.id)
+                  }}
+                  position={[restaurant.latitude, restaurant.longitude]}
+                  icon={markerIcon(restaurant.vegetarianType, selectedId === restaurant.id)}
+                  title={restaurant.name}
+                  eventHandlers={{ click: () => focusRestaurant(restaurant) }}
+                >
+                  <Popup autoPan={false}>
+                    <MarkerPreview restaurant={restaurant} />
+                  </Popup>
+                </Marker>
+              ))}
+            </MapContainer>
+          </div>
+
+          {/* Reset back to all of Tokyo — overlaid on the map, top-right. */}
+          <motion.button
+            type="button"
+            onClick={resetView}
+            whileHover={{ y: -1, rotate: -1 }}
+            whileTap={{ scale: 0.94 }}
+            className="hand-drawn absolute right-4 top-4 z-[1000] flex items-center gap-1.5 border-2 border-bark-400 bg-cream-50 px-3 py-1.5 text-sm font-display text-bark-800 shadow-soft"
           >
-            <TileLayer url={OSM_TILE_URL} attribution={OSM_ATTRIBUTION} />
-            <MapBoundsWatcher onBoundsChange={handleBoundsChange} />
-            <MapSearchFitter searching={searching} restaurants={restaurants} />
-            {restaurants.map((restaurant) => (
-              <Marker
-                key={restaurant.id}
-                position={[restaurant.latitude, restaurant.longitude]}
-                icon={selectedId === restaurant.id ? selectedRestaurantIcon : restaurantIcon}
-                title={restaurant.name}
-                eventHandlers={{ click: () => setSelectedId(restaurant.id) }}
-              >
-                <Popup>
-                  <MarkerPreview restaurant={restaurant} />
-                </Popup>
-              </Marker>
-            ))}
-          </MapContainer>
+            <Icon name="map" className="size-4 text-leaf-600" />
+            {t.home.resetMap}
+          </motion.button>
         </motion.div>
 
         <aside aria-label={t.home.resultsAriaLabel} className="flex flex-col">
@@ -206,7 +267,7 @@ export function HomePage() {
               {searching ? t.home.searchResultsHeading : t.home.resultsHeading}
             </h2>
             <span className="text-sm text-bark-400">
-              {loading ? t.home.updating : `${restaurants.length}${activeFilters ? ` / ${total}` : ''}`}
+              {loading ? t.home.updating : `${groups.length}${activeFilters ? ` / ${total}` : ''}`}
             </span>
           </div>
 
@@ -224,19 +285,13 @@ export function HomePage() {
             </p>
           )}
 
-          {truncated && searching && (
-            <p className="mt-2 rounded-cozy bg-apricot-300/25 px-4 py-2.5 text-xs text-bark-800">
-              {t.home.truncatedSearchNotice}
-            </p>
-          )}
-
           {error && (
             <div className="mt-3">
               <ErrorState onRetry={() => setBounds((current) => (current ? { ...current } : null))} />
             </div>
           )}
 
-          {!error && !loading && restaurants.length === 0 && (
+          {!error && !loading && groups.length === 0 && (
             <div className="mt-4">
               <EmptyState
                 title={searching ? t.home.noResultsSearch : activeFilters ? t.home.noResultsFiltered : t.home.noResultsInBounds}
@@ -244,19 +299,20 @@ export function HomePage() {
             </div>
           )}
 
-          <ul className="mt-3 max-h-[620px] space-y-2.5 overflow-y-auto p-1.5">
-            {restaurants.map((restaurant, index) => (
+          <ul className="mt-3 max-h-[620px] space-y-3 overflow-y-auto p-1.5">
+            {groups.map((group, index) => (
               <motion.li
-                key={restaurant.id}
+                key={group.representative.id}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.25, delay: Math.min(index, 14) * 0.025, ease: 'easeOut' }}
               >
                 <ResultRow
-                  restaurant={restaurant}
+                  restaurant={group.representative}
+                  branchCount={group.members.length}
                   index={index}
-                  selected={selectedId === restaurant.id}
-                  onSelect={() => setSelectedId(restaurant.id)}
+                  selected={group.members.some((m) => m.id === selectedId)}
+                  onSelect={() => focusRestaurant(group.representative)}
                 />
               </motion.li>
             ))}
@@ -265,6 +321,36 @@ export function HomePage() {
       </div>
     </div>
   )
+}
+
+/** Where the map should fly next. A fresh object each time re-triggers the fly. */
+interface FlyTarget {
+  lat: number
+  lng: number
+  zoom: number
+  /** Drop the point below centre, leaving room above for a popup. */
+  offset?: boolean
+}
+
+/**
+ * Flies the map whenever `target` changes. Uses `useMap`, so it always drives the live
+ * map instance — lifting the map into page state instead goes stale across this
+ * react-leaflet version's remounts, silently no-oping every fly.
+ */
+function MapFlyer({ target }: { target: FlyTarget | null }) {
+  const map = useMap()
+  useEffect(() => {
+    if (!target) return
+    // setView, not flyTo: an instant move is what item 4 wants (no lag, no re-adjustment),
+    // and the offset drops the pin below centre so its popup fits above without a re-pan.
+    if (target.offset) {
+      const point = map.project([target.lat, target.lng], target.zoom).subtract([0, POPUP_OFFSET])
+      map.setView(map.unproject(point, target.zoom), target.zoom)
+    } else {
+      map.setView([target.lat, target.lng], target.zoom)
+    }
+  }, [target, map])
+  return null
 }
 
 /**
@@ -327,15 +413,20 @@ function FilterBar({ keyword, onKeyword, diet, onDiet, category, onCategory, cat
         />
       </div>
 
-      {/* Diet chips stay front-and-centre (the primary filter); cuisine — with many
-          more options — collapses into one dropdown instead of a chip each, so the
-          whole bar reads as a handful of controls rather than a wall of buttons. */}
+      {/* Diet chips carry the pin colour as a dot, so they double as the map's legend —
+          no separate key needed. Cuisine collapses into one dropdown, so the whole bar
+          reads as a handful of controls rather than a wall of buttons. */}
       <div className="flex flex-wrap items-center gap-2">
         <FilterChip active={diet === null} onClick={() => onDiet(null)}>
           {t.home.all}
         </FilterChip>
         {FILTERABLE_VEGETARIAN_TYPES.map((type) => (
-          <FilterChip key={type} active={diet === type} onClick={() => onDiet(diet === type ? null : type)}>
+          <FilterChip
+            key={type}
+            active={diet === type}
+            dotColor={VEGETARIAN_PIN_COLORS[type]}
+            onClick={() => onDiet(diet === type ? null : type)}
+          >
             {t.vegetarianType[type]}
           </FilterChip>
         ))}
@@ -362,10 +453,12 @@ function FilterChip({
   active,
   onClick,
   children,
+  dotColor,
 }: {
   active: boolean
   onClick: () => void
   children: React.ReactNode
+  dotColor?: string
 }) {
   return (
     <motion.button
@@ -375,12 +468,19 @@ function FilterChip({
       whileHover={{ y: -1 }}
       whileTap={{ scale: 0.92 }}
       transition={{ type: 'spring', stiffness: 400, damping: 17 }}
-      className={`cursor-pointer rounded-pill border px-3.5 py-1.5 text-sm ${
+      className={`flex cursor-pointer items-center gap-1.5 rounded-pill border px-3.5 py-1.5 text-sm ${
         active
           ? 'border-leaf-500 bg-leaf-500 font-medium text-white'
           : 'border-cream-300 bg-white text-bark-600 hover:border-leaf-300 hover:text-leaf-700'
       }`}
     >
+      {dotColor && (
+        <span
+          aria-hidden="true"
+          className="size-2.5 rounded-full ring-2 ring-white/60"
+          style={{ backgroundColor: dotColor }}
+        />
+      )}
       {children}
     </motion.button>
   )
@@ -388,11 +488,13 @@ function FilterChip({
 
 function ResultRow({
   restaurant,
+  branchCount,
   index = 0,
   selected,
   onSelect,
 }: {
   restaurant: RestaurantSummary
+  branchCount: number
   index?: number
   selected: boolean
   onSelect: () => void
@@ -400,77 +502,104 @@ function ResultRow({
   const { lang, t } = useLanguage()
   const name = useRomanized(restaurant.name)
   return (
-    <motion.div
+    <motion.button
+      type="button"
+      onClick={onSelect}
+      aria-pressed={selected}
       whileHover={{ y: -3, rotate: index % 2 === 0 ? -0.6 : 0.6 }}
+      whileTap={{ scale: 0.98 }}
       transition={{ type: 'spring', stiffness: 320, damping: 22 }}
-      className={`flex gap-3 overflow-hidden ${index % 2 === 0 ? 'hand-drawn' : 'hand-drawn-alt'} border bg-white shadow-soft transition-colors ${
-        selected ? 'border-2 border-leaf-400 ring-2 ring-leaf-100' : 'border-cream-200 hover:border-leaf-300'
+      className={`flex w-full gap-3 overflow-hidden p-2.5 text-left ${index % 2 === 0 ? 'hand-drawn' : 'hand-drawn-alt'} border-2 bg-white shadow-soft transition-colors ${
+        selected ? 'border-leaf-400 ring-2 ring-leaf-100' : 'border-cream-200 hover:border-leaf-300'
       }`}
     >
       <RestaurantPhoto
         imageUrl={restaurant.imageUrl}
         name={restaurant.name}
         categories={restaurant.categories}
-        className="h-full w-24 shrink-0"
+        className="hand-drawn size-24 shrink-0"
       />
 
-      <div className="min-w-0 flex-1">
-        <button type="button" onClick={onSelect} aria-pressed={selected} className="w-full cursor-pointer pt-3.5 pr-3.5 pb-2 text-left">
-          <span className={`inline-block rounded-pill px-2.5 py-0.5 text-xs font-medium ${VEGETARIAN_TYPE_STYLES[restaurant.vegetarianType]}`}>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className={`inline-block w-fit rounded-pill px-2.5 py-0.5 text-xs font-medium ${VEGETARIAN_TYPE_STYLES[restaurant.vegetarianType]}`}>
             {t.vegetarianType[restaurant.vegetarianType]}
           </span>
-          <span className="mt-2 block truncate font-medium text-bark-800">{name}</span>
-          {restaurant.area && (
-            <span className="mt-1 flex items-center gap-1 text-xs text-bark-400">
-              <Icon name="pin" className="size-3.5 shrink-0" />
-              <span className="truncate">{areaLabel(restaurant.area, lang)}</span>
+          {branchCount > 1 && (
+            <span className="rounded-pill bg-apricot-300/40 px-2 py-0.5 text-[11px] font-medium text-bark-600">
+              {t.home.branches(branchCount)}
             </span>
           )}
-        </button>
-        <div className="flex items-center justify-between gap-2 pr-3.5 pb-3.5">
-          <Rating averageRating={restaurant.averageRating} reviewCount={restaurant.reviewCount} />
+        </div>
+        <span className="mt-1.5 block truncate font-display text-[15px] text-bark-800">{name}</span>
+        {restaurant.area && (
+          <span className="mt-1 flex items-center gap-1 text-xs text-bark-400">
+            <Icon name="pin" className="size-3.5 shrink-0" />
+            <span className="truncate">{areaLabel(restaurant.area, lang)}</span>
+          </span>
+        )}
+        <div className="mt-auto flex items-center justify-between gap-2 pt-1.5">
+          <Rating
+            averageRating={restaurant.averageRating}
+            reviewCount={restaurant.reviewCount}
+            googleRating={restaurant.googleRating}
+            googleRatingCount={restaurant.googleRatingCount}
+          />
           <Link
             to={`/restaurants/${restaurant.id}`}
+            onClick={(event) => event.stopPropagation()}
             aria-label={`${name}${t.home.detailCta}`}
-            className="flex shrink-0 items-center justify-center rounded-pill p-1.5 text-leaf-600 transition-colors hover:bg-leaf-50"
+            className="flex shrink-0 items-center gap-1 rounded-pill bg-leaf-50 px-2.5 py-1 text-xs font-medium text-leaf-700 transition-colors hover:bg-leaf-100"
           >
-            <Icon name="arrow-right" className="size-4" />
+            {t.home.detailCta}
+            <Icon name="arrow-right" className="size-3.5" />
           </Link>
         </div>
       </div>
-    </motion.div>
+    </motion.button>
   )
 }
 
 function MarkerPreview({ restaurant }: { restaurant: RestaurantSummary }) {
   const { lang, t } = useLanguage()
   const name = useRomanized(restaurant.name)
-  const address = useRomanized(restaurant.address)
   return (
-    <div className="w-46 space-y-1.5">
-      <RestaurantPhoto
-        imageUrl={restaurant.imageUrl}
-        name={restaurant.name}
-        categories={restaurant.categories}
-        className="hand-drawn h-20 w-full"
-      />
-      <span className={`inline-block rounded-pill px-2.5 py-0.5 text-xs font-medium ${VEGETARIAN_TYPE_STYLES[restaurant.vegetarianType]}`}>
-        {t.vegetarianType[restaurant.vegetarianType]}
-      </span>
-      <p className="text-sm font-bold text-bark-800">{name}</p>
+    <div className="w-48 space-y-2">
+      <div className="hand-drawn relative overflow-hidden">
+        <RestaurantPhoto
+          imageUrl={restaurant.imageUrl}
+          name={restaurant.name}
+          categories={restaurant.categories}
+          className="h-24 w-full"
+        />
+        <span className={`absolute left-1.5 top-1.5 rounded-pill px-2 py-0.5 text-[11px] font-medium shadow-soft ${VEGETARIAN_TYPE_STYLES[restaurant.vegetarianType]}`}>
+          {t.vegetarianType[restaurant.vegetarianType]}
+        </span>
+      </div>
+
+      <div className="flex items-start gap-1.5">
+        <Mascot mood="happy" size={26} className="mt-0.5 shrink-0 -rotate-6" />
+        <p className="font-display text-[15px] leading-snug text-bark-800">{name}</p>
+      </div>
+
       {restaurant.categories.length > 0 && (
         <p className="text-xs text-bark-600">
           {restaurant.categories.map((c) => categoryLabel(c, lang)).join('・')}
         </p>
       )}
-      <Rating averageRating={restaurant.averageRating} reviewCount={restaurant.reviewCount} />
-      {address && <p className="text-xs text-bark-400">{address}</p>}
+      <Rating
+        averageRating={restaurant.averageRating}
+        reviewCount={restaurant.reviewCount}
+        googleRating={restaurant.googleRating}
+        googleRatingCount={restaurant.googleRatingCount}
+      />
+
       <Link
         to={`/restaurants/${restaurant.id}`}
-        className="mt-1 inline-flex items-center gap-1 rounded-pill bg-leaf-500 px-4 py-1.5 text-xs font-medium text-white hover:bg-leaf-600"
+        className="flex items-center justify-center gap-1 rounded-pill bg-apricot-300 px-4 py-2 text-sm font-medium text-bark-800 shadow-soft transition-colors hover:bg-apricot-500 hover:text-white"
       >
-        {t.home.detailCta}
-        <Icon name="arrow-right" className="size-3.5" />
+        {t.home.markerCta}
+        <Icon name="arrow-right" className="size-4" />
       </Link>
     </div>
   )

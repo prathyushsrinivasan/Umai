@@ -26,6 +26,7 @@ function makeDetail(overrides: Partial<RestaurantDetail> = {}): RestaurantDetail
     websiteUrl: 'https://example.com',
     phone: '03-0000-0001',
     openingHours: '11:00-21:00',
+    googlePlaceId: null,
     tags: [{ id: 1, slug: 'organic', nameJa: 'オーガニック食材' }],
     source: 'USER_SUBMISSION',
     createdAt: '2026-07-01T00:00:00Z',
@@ -44,9 +45,21 @@ const emptyReviews = {
   last: true,
 }
 
+const emptyPage = {
+  content: [],
+  page: 0,
+  size: 60,
+  totalElements: 0,
+  totalPages: 0,
+  first: true,
+  last: true,
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
   mockedReviews.fetchReviews.mockResolvedValue(emptyReviews)
+  // The detail page looks up sibling branches; no branches by default.
+  mockedRestaurants.searchRestaurants.mockResolvedValue(emptyPage)
 })
 
 function renderDetail() {
@@ -105,7 +118,7 @@ describe('RestaurantDetailPage', () => {
 
       renderDetail()
 
-      expect(await screen.findByText('まだ評価がありません')).toBeInTheDocument()
+      expect(await screen.findByText('評価はまだありません')).toBeInTheDocument()
     })
   })
 

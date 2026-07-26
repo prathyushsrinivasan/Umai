@@ -37,6 +37,9 @@ public record RestaurantDetailDto(
 		List<TagDto> tags,
 		@Schema(nullable = true, description = "レビューがない場合は null") Double averageRating,
 		long reviewCount,
+		@Schema(nullable = true, description = "Google の平均評価（自前レビューがない店舗のフォールバック）") Double googleRating,
+		@Schema(nullable = true) Integer googleRatingCount,
+		@Schema(nullable = true, description = "Google Places ID（マップ・メニューへのリンク用）") String googlePlaceId,
 		@Schema(description = "データの出所。SEED は開発用のダミーデータ") RestaurantSource source,
 		Instant createdAt,
 		Instant updatedAt) {

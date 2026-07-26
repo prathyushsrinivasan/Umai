@@ -2,13 +2,14 @@ import { useCallback } from 'react'
 import { motion } from 'motion/react'
 import { Link, useParams } from 'react-router-dom'
 
-import { fetchRestaurant } from '../api/restaurants'
+import { fetchRestaurant, searchRestaurants } from '../api/restaurants'
 import { ApiError } from '../api/client'
 import { RestaurantMiniMap } from '../components/map/RestaurantMiniMap'
 import { RestaurantPhoto } from '../components/restaurant/RestaurantPhoto'
 import { ReviewSection } from '../components/restaurant/ReviewSection'
 import { Chip } from '../components/ui/Chip'
 import { Icon } from '../components/ui/Icon'
+import { Mascot } from '../components/ui/Mascot'
 import { Rating } from '../components/ui/Rating'
 import { ErrorState, LoadingState } from '../components/ui/States'
 import { useAsync } from '../hooks/useAsync'
@@ -33,6 +34,19 @@ export function RestaurantDetailPage() {
     [restaurantId],
   )
   const { data: restaurant, loading, error, reload } = useAsync(load)
+
+  // Other branches of the same-named chain, so a chain's page can point to its other
+  // locations. Runs once the restaurant (and thus its name) is known.
+  const loadBranches = useCallback(
+    (signal: AbortSignal) => {
+      if (!restaurant) return Promise.resolve([])
+      return searchRestaurants({ keyword: restaurant.name, size: 60 }, signal).then((page) =>
+        page.content.filter((r) => r.name === restaurant.name && r.id !== restaurant.id),
+      )
+    },
+    [restaurant],
+  )
+  const branches = useAsync(loadBranches)
 
   // Hooks must run unconditionally (before the early returns below), so these read
   // from `restaurant?.` and fall back to null while it's still loading.
@@ -81,37 +95,64 @@ export function RestaurantDetailPage() {
         initial={{ opacity: 0, scale: 0.97 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.45, ease: 'easeOut' }}
-        className="hand-drawn crayon-border mt-4 overflow-hidden shadow-soft"
+        className="hand-drawn crayon-border relative mt-4 overflow-hidden shadow-soft"
       >
         <RestaurantPhoto
           imageUrl={restaurant.imageUrl}
           name={restaurant.name}
           categories={restaurant.categories}
-          className="h-52 w-full sm:h-64"
+          className="h-52 w-full sm:h-72"
         />
+        <span
+          className={`absolute left-3 top-3 rounded-pill px-3.5 py-1.5 text-sm font-medium shadow-soft ${VEGETARIAN_TYPE_STYLES[restaurant.vegetarianType]}`}
+        >
+          {t.vegetarianType[restaurant.vegetarianType]}
+        </span>
       </motion.div>
 
       <header className="mt-6">
-        <div className="flex flex-wrap items-center gap-2">
-          <span
-            className={`rounded-pill px-3.5 py-1.5 text-sm font-medium ${VEGETARIAN_TYPE_STYLES[restaurant.vegetarianType]}`}
+        <div className="flex items-start gap-3">
+          <motion.div
+            initial={{ scale: 0, rotate: -20 }}
+            animate={{ scale: 1, rotate: -8 }}
+            transition={{ type: 'spring', stiffness: 260, damping: 15, delay: 0.15 }}
+            className="shrink-0"
           >
-            {t.vegetarianType[restaurant.vegetarianType]}
-          </span>
-          {restaurant.categories.map((category) => (
-            <Chip key={category.id} label={categoryLabel(category, lang)} readOnly />
-          ))}
+            <Mascot mood="happy" size={52} />
+          </motion.div>
+          <h1 className="font-display text-3xl text-bark-800 sm:text-4xl">{name}</h1>
         </div>
 
-        <h1 className="font-display mt-4 text-3xl text-bark-800 sm:text-4xl">{name}</h1>
+        {restaurant.categories.length > 0 && (
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            {restaurant.categories.map((category) => (
+              <Chip key={category.id} label={categoryLabel(category, lang)} readOnly />
+            ))}
+          </div>
+        )}
 
         <div className="mt-3">
           <Rating
             averageRating={restaurant.averageRating}
             reviewCount={restaurant.reviewCount}
+            googleRating={restaurant.googleRating}
+            googleRatingCount={restaurant.googleRatingCount}
             size="md"
           />
         </div>
+
+        {restaurant.googlePlaceId && (
+          <a
+            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(restaurant.name)}&query_place_id=${restaurant.googlePlaceId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-4 inline-flex items-center gap-2 rounded-pill bg-apricot-300 px-4 py-2 text-sm font-medium text-bark-800 shadow-soft transition-colors hover:bg-apricot-500 hover:text-white"
+          >
+            <Icon name="plate" className="size-4" />
+            {t.detailPage.menuOnGoogle}
+            <Icon name="arrow-right" className="size-3.5" />
+          </a>
+        )}
       </header>
 
       {description && <p className="mt-6 leading-relaxed text-bark-600">{description}</p>}
@@ -135,11 +176,12 @@ export function RestaurantDetailPage() {
       )}
 
       <section className="mt-8" aria-labelledby="info-heading">
-        <h2 id="info-heading" className="font-display text-xl text-bark-800">
+        <h2 id="info-heading" className="font-display inline-flex items-center gap-2 text-xl text-bark-800 crayon-underline">
+          <Icon name="plate" className="size-5 text-leaf-500" />
           {t.detailPage.info}
         </h2>
 
-        <dl className="hand-drawn mt-4 divide-y divide-cream-200 overflow-hidden border border-cream-200 bg-white shadow-soft">
+        <dl className="hand-drawn crayon-border mt-4 divide-y divide-cream-200 overflow-hidden bg-white shadow-soft">
           {restaurant.area && <InfoRow label={t.detailPage.area} value={areaLabel(restaurant.area, lang)} />}
           {address && <InfoRow label={t.detailPage.address} value={address} />}
           {openingHours && <InfoRow label={t.detailPage.hours} value={openingHours} multiline />}
@@ -179,16 +221,46 @@ export function RestaurantDetailPage() {
       </section>
 
       <section className="mt-8" aria-labelledby="map-heading">
-        <h2 id="map-heading" className="font-display text-xl text-bark-800">
+        <h2 id="map-heading" className="font-display inline-flex items-center gap-2 text-xl text-bark-800 crayon-underline">
+          <Icon name="pin" className="size-5 text-berry-500" />
           {t.detailPage.mapHeading}
         </h2>
-        <div className="hand-drawn-alt mt-4 overflow-hidden border border-cream-200 shadow-soft">
+        <div className="hand-drawn-alt crayon-border mt-4 overflow-hidden shadow-soft">
           <RestaurantMiniMap
             latitude={restaurant.latitude}
             longitude={restaurant.longitude}
             name={name ?? restaurant.name}
+            vegetarianType={restaurant.vegetarianType}
+            branches={(branches.data ?? []).map((b) => ({
+              id: b.id,
+              latitude: b.latitude,
+              longitude: b.longitude,
+              name: b.name,
+              vegetarianType: b.vegetarianType,
+            }))}
           />
         </div>
+
+        {branches.data && branches.data.length > 0 && (
+          <div className="mt-4">
+            <h3 className="font-display text-base text-bark-800">
+              {t.detailPage.branchesHeading(branches.data.length)}
+            </h3>
+            <ul className="mt-2 flex flex-wrap gap-2">
+              {branches.data.map((branch) => (
+                <li key={branch.id}>
+                  <Link
+                    to={`/restaurants/${branch.id}`}
+                    className="hand-drawn inline-flex items-center gap-1.5 border-2 border-cream-200 bg-white px-3 py-1.5 text-sm text-bark-600 shadow-soft transition-colors hover:border-leaf-300 hover:text-leaf-700"
+                  >
+                    <Icon name="pin" className="size-3.5 text-berry-500" />
+                    {branch.area ? areaLabel(branch.area, lang) : (branch.address ?? branch.name)}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </section>
 
       {/* Reloading the restaurant after a review change refreshes the aggregate
@@ -223,7 +295,7 @@ function NotFound() {
   const { t } = useLanguage()
   return (
     <div className="mx-auto max-w-xl px-5 py-24 text-center">
-      <Icon name="sprout" className="mx-auto size-10 text-leaf-400" />
+      <Mascot mood="crying" size={72} className="mx-auto" />
       <h1 className="font-display mt-4 text-2xl text-bark-800">{t.detailPage.notFoundTitle}</h1>
       <p className="mt-3 text-bark-600">{t.detailPage.notFoundBody}</p>
       <Link
