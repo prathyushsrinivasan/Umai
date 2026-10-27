@@ -8,6 +8,7 @@ import org.springframework.scheduling.annotation.EnableAsync;
 @SpringBootApplication
 @ConfigurationPropertiesScan
 // Imports run on a background thread; see ImportJobService.
+@org.springframework.scheduling.annotation.EnableScheduling
 @EnableAsync
 public class UmaiBackendApplication {
 

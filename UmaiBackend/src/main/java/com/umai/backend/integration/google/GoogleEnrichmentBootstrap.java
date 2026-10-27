@@ -54,9 +54,8 @@ public class GoogleEnrichmentBootstrap implements ApplicationRunner {
 			while (true) {
 				GoogleEnrichmentResult result = enrichmentService.enrich(BATCH_SIZE);
 				log.info("Google enrichment batch: {} (remaining {})", result, enrichmentService.remaining());
-				// Every processed row is marked enriched, so "remaining" always shrinks; an
-				// empty batch means there's nothing left to do.
-				if (result.processed() == 0) {
+				// Stop on an empty batch or a provider/budget failure; failures have a retry time.
+				if (result.processed() == 0 || result.matched() + result.noMatch() < result.processed()) {
 					break;
 				}
 			}

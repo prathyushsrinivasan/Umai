@@ -19,6 +19,7 @@ public class TagController {
 		this.tagRepository = tagRepository;
 	}
 
+    @org.springframework.cache.annotation.Cacheable(cacheNames = "referenceData", key = "'tag'")
 	@GetMapping
 	@Operation(summary = "タグ一覧", description = "レストランに付与されるタグを返します。")
 	public List<TagDto> list() {

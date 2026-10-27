@@ -11,5 +11,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
  * @param skipped  records ignored, e.g. one already edited by a user
  */
 @Schema(description = "外部データ取り込みの結果")
-public record ImportResult(int fetched, int created, int updated, int skipped) {
+public record ImportResult(int fetched, int created, int updated, int skipped, boolean truncated) {
+    public ImportResult(int fetched, int created, int updated, int skipped) { this(fetched, created, updated, skipped, false); }
 }

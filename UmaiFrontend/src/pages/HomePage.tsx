@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom'
 
 import { fetchCategories, fetchRestaurantsInBounds, searchRestaurants } from '../api/restaurants'
 import { MapBoundsWatcher } from '../components/map/MapBoundsWatcher'
+import { CoverageNotice } from '../components/restaurant/CoverageNotice'
 import { RestaurantPhoto } from '../components/restaurant/RestaurantPhoto'
 import { Icon } from '../components/ui/Icon'
 import { Mascot } from '../components/ui/Mascot'
@@ -117,7 +118,7 @@ export function HomePage() {
     setLoading(true)
     setError(null)
 
-    fetchRestaurantsInBounds(bounds, controller.signal)
+    fetchRestaurantsInBounds({ ...bounds, vegetarianTypes: diet ? [diet] : undefined, categories: category ? [category] : undefined }, controller.signal)
       .then((data) => {
         if (controller.signal.aborted) return
         setAll(data.restaurants)
@@ -132,7 +133,7 @@ export function HomePage() {
       })
 
     return () => controller.abort()
-  }, [bounds, searching])
+  }, [bounds, searching, diet, category])
 
   // Keyword-driven load — searches every restaurant, regardless of what the map
   // happens to be showing right now.
@@ -169,23 +170,20 @@ export function HomePage() {
     return () => controller.abort()
   }, [searching, debouncedKeyword, diet, category])
 
-  // In viewport mode, diet/cuisine still need a client-side pass over what the bounds
-  // returned. In search mode the backend already applied every filter, so `all` is
-  // the final set.
-  const restaurants = useMemo(() => {
-    if (searching) return all
-    return all.filter((r) => {
-      if (diet && r.vegetarianType !== diet) return false
-      if (category && !r.categories.some((c) => c.slug === category)) return false
-      return true
-    })
-  }, [all, diet, category, searching])
+  // Every filter is applied by the server before its viewport limit.
+  const restaurants = all
 
   // Chains (same name, many branches) collapse to one entry in the list; the map still
   // shows every branch as its own pin.
   const groups = useMemo(() => groupByName(restaurants), [restaurants])
 
   const activeFilters = Boolean(searching || diet || category)
+  const browseParams = new URLSearchParams()
+  if (debouncedKeyword) browseParams.set('keyword', debouncedKeyword)
+  if (diet) browseParams.set('vegetarianTypes', diet)
+  if (category) browseParams.set('categories', category)
+  const browseUrl = `/restaurants?${browseParams}`
+
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-5 sm:px-5">
@@ -198,6 +196,8 @@ export function HomePage() {
         <Mascot mood="happy" size={40} className="shrink-0 -rotate-6" />
         {t.home.title}
       </motion.h1>
+
+      <CoverageNotice />
 
       <FilterBar
         keyword={keyword}
@@ -272,16 +272,16 @@ export function HomePage() {
           </div>
 
           <Link
-            to="/restaurants"
+            to={browseUrl}
             className="mt-2 inline-flex w-fit items-center gap-1 rounded-pill border border-cream-300 bg-white px-3.5 py-1.5 text-xs font-medium text-leaf-700 shadow-soft transition-colors hover:border-leaf-300 hover:bg-leaf-50"
           >
             {t.home.browseAllCta}
             <Icon name="arrow-right" className="size-3.5" />
           </Link>
 
-          {truncated && !searching && !activeFilters && (
+          {truncated && (
             <p className="mt-2 rounded-cozy bg-apricot-300/25 px-4 py-2.5 text-xs text-bark-800">
-              {t.home.truncatedNotice}
+              {t.home.truncatedNotice} <Link to={browseUrl} className="underline">{t.home.browseAllCta}</Link>
             </p>
           )}
 

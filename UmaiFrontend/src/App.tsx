@@ -19,6 +19,7 @@ import { HomePage } from './pages/HomePage'
 const RestaurantsPage = lazy(() =>
   import('./pages/RestaurantsPage').then((m) => ({ default: m.RestaurantsPage })),
 )
+const RestaurantPhotosPage = lazy(() => import('./pages/RestaurantPhotosPage').then(m => ({ default: m.RestaurantPhotosPage })))
 const RestaurantDetailPage = lazy(() =>
   import('./pages/RestaurantDetailPage').then((m) => ({ default: m.RestaurantDetailPage })),
 )
@@ -56,6 +57,7 @@ function App() {
                 <Route path="/search" element={<Navigate to="/" replace />} />
                 <Route path="/categories" element={<Navigate to="/" replace />} />
                 <Route path="/restaurants" element={<RestaurantsPage />} />
+                <Route path="/restaurants/:id/photos" element={<RestaurantPhotosPage />} />
                 <Route path="/restaurants/:id" element={<RestaurantDetailPage />} />
                 <Route path="/login" element={<LoginPage />} />
 

@@ -38,6 +38,10 @@ class DatabaseConstraintsIntegrationTests extends AbstractPostgisIntegrationTest
 	@Autowired
 	private ReviewRepository reviewRepository;
 
+    @Autowired
+    private org.springframework.jdbc.core.JdbcTemplate jdbc;
+
+
 	@Test
 	@DisplayName("a rating outside 1-5 is rejected")
 	void ratingOutsideRangeIsRejected() {
@@ -46,7 +50,8 @@ class DatabaseConstraintsIntegrationTests extends AbstractPostgisIntegrationTest
 
 		Review invalid = new Review(user, restaurant, (short) 6, "範囲外の評価");
 
-		assertThatThrownBy(() -> reviewRepository.saveAndFlush(invalid))
+		// Exercise the database CHECK directly, bypassing entity Bean Validation.
+        assertThatThrownBy(() -> jdbc.update("INSERT INTO reviews(user_id, restaurant_id, rating) VALUES (?, ?, 6)", user.getId(), restaurant.getId()))
 			.isInstanceOf(DataIntegrityViolationException.class);
 	}
 
@@ -69,7 +74,7 @@ class DatabaseConstraintsIntegrationTests extends AbstractPostgisIntegrationTest
 		Restaurant invalid = new Restaurant("座標が不正な店", 120.0, 139.7, VegetarianType.UNKNOWN,
 			RestaurantSource.USER_SUBMISSION);
 
-		assertThatThrownBy(() -> restaurantRepository.saveAndFlush(invalid))
+		assertThatThrownBy(() -> jdbc.update("INSERT INTO restaurants(name,latitude,longitude,vegetarian_type,status,source) VALUES ('Invalid coordinates',120,139.7,'UNKNOWN','PUBLISHED','USER_SUBMISSION')"))
 			.isInstanceOf(DataIntegrityViolationException.class);
 	}
 

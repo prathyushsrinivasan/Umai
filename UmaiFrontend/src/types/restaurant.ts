@@ -55,6 +55,7 @@ export interface RestaurantSummary {
   /** Google's average rating, shown as a fallback when there are no local reviews. */
   googleRating: number | null
   googleRatingCount: number | null
+  branchCount?: number
 }
 
 /** Full restaurant record for the detail screen. */
@@ -68,6 +69,9 @@ export interface RestaurantDetail extends RestaurantSummary {
   source: RestaurantSource
   createdAt: string
   updatedAt: string
+  lastSyncedAt?: string | null
+  lastVerifiedAt?: string | null
+  manuallyMaintained?: boolean
 }
 
 /** Paginated envelope returned by list and search endpoints. */
@@ -91,6 +95,8 @@ export interface MapRestaurants {
 
 /** Geographic bounding box sent to the map endpoint. */
 export interface MapBounds {
+  vegetarianTypes?: VegetarianType[]
+  categories?: string[]
   minLat: number
   minLon: number
   maxLat: number
@@ -120,6 +126,7 @@ export interface CreateRestaurantRequest {
 
 /** Filters accepted by the search endpoint. All optional, combined with AND. */
 export interface RestaurantSearchParams {
+  groupByName?: boolean
   keyword?: string
   vegetarianTypes?: VegetarianType[]
   categories?: string[]

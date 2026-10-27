@@ -20,6 +20,14 @@ import org.testcontainers.utility.DockerImageName;
  * passed: a run that started no container has verified nothing about the schema.
  */
 public abstract class AbstractPostgisIntegrationTest {
+    @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.cache.CacheManager caches;
+
+    @org.junit.jupiter.api.BeforeEach
+    void clearReadCaches() {
+        caches.getCacheNames().forEach(name -> caches.getCache(name).clear());
+    }
+
 
 	private static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>(
 		DockerImageName.parse("postgis/postgis:16-3.4").asCompatibleSubstituteFor("postgres"))
@@ -37,12 +45,15 @@ public abstract class AbstractPostgisIntegrationTest {
 
 	@DynamicPropertySource
 	static void datasourceProperties(DynamicPropertyRegistry registry) {
-		registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-		registry.add("spring.datasource.username", POSTGRES::getUsername);
-		registry.add("spring.datasource.password", POSTGRES::getPassword);
+		registry.add("spring.datasource.url", () -> System.getenv("UMAI_TEST_DB_URL") != null ? System.getenv("UMAI_TEST_DB_URL") : POSTGRES.getJdbcUrl());
+		registry.add("spring.datasource.username", () -> System.getenv().getOrDefault("UMAI_TEST_DB_USERNAME", "umai"));
+		registry.add("spring.datasource.password", () -> System.getenv().getOrDefault("UMAI_TEST_DB_PASSWORD", "umai"));
 		// Seed data is part of what these tests verify.
 		registry.add("spring.flyway.locations", () -> "classpath:db/migration,classpath:db/seed");
-		// Test-only signing key. Real deployments supply this via JWT_SECRET.
+		registry.add("umai.data.include-seed", () -> "true");
+        registry.add("umai.refresh.enabled", () -> "false");
+        registry.add("umai.submissions.auto-publish", () -> "true");
+        // Test-only signing key. Real deployments supply this via JWT_SECRET.
 		registry.add("umai.security.jwt.secret",
 			() -> "test-only-signing-key-not-used-anywhere-outside-the-test-suite");
 		// Every request in these tests comes from the same address, so the limiter

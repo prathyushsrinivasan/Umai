@@ -72,7 +72,8 @@ public class SecurityConfig {
 				.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
 				// Registration and login must be reachable without a token.
 				.requestMatchers(HttpMethod.POST, "/api/v1/auth/register", "/api/v1/auth/login").permitAll()
-				// Public browsing of restaurant data.
+				.requestMatchers("/api/v1/admin/**").hasAnyRole("ADMIN", "MODERATOR")
+                // Public browsing of restaurant data.
 				.requestMatchers(HttpMethod.GET, "/api/v1/**").permitAll()
 				// Everything else — submissions, reviews, account info — needs a token.
 				.anyRequest().authenticated())

@@ -31,4 +31,9 @@ public interface RestaurantDataProvider {
 	 */
 	List<ExternalRestaurant> fetchWithin(MapBounds bounds, int limit);
 
+    record Batch(List<ExternalRestaurant> restaurants, boolean truncated) {}
+    default Batch fetchBatch(MapBounds bounds, int limit) {
+        var restaurants = fetchWithin(bounds, limit);
+        return new Batch(restaurants, restaurants.size() >= limit);
+    }
 }

@@ -19,13 +19,12 @@ import org.springframework.web.client.RestClientException;
  * <ol>
  *   <li>{@link #findPlaceId} — resolve a restaurant's name + coordinates to a Google
  *       {@code place_id} (the one field Google lets us store).</li>
- *   <li>{@link #fetchDetails} — pull the descriptive fields OpenStreetMap usually lacks.</li>
+ *   <li>{@link #fetchPhoto} — request photo metadata only when a visitor asks.</li>
  *   <li>{@link #resolvePhotoUri} — get a short-lived, Google-hosted image URL to redirect
  *       a browser to, so photos are served live rather than stored.</li>
  * </ol>
  *
- * <p>Every method fails soft: any network, auth or parsing problem is logged and yields
- * an empty result, so one bad lookup never aborts a batch or errors a page load.
+ * <p>Empty results mean no match; operational failures are distinct so callers can back off.
  */
 @Component
 public class GooglePlacesClient {
@@ -33,15 +32,20 @@ public class GooglePlacesClient {
 	private static final Logger log = LoggerFactory.getLogger(GooglePlacesClient.class);
 
 	private final GoogleProperties properties;
+    private final ExternalRequestBudget budget;
+    private volatile long unavailableUntil;
 
 	private final RestClient restClient;
 
-	public GooglePlacesClient(RestClient.Builder restClientBuilder, GoogleProperties properties) {
+	public GooglePlacesClient(RestClient.Builder restClientBuilder, GoogleProperties properties, ExternalRequestBudget budget) {
+        this.budget = budget;
 		this.properties = properties;
 		// The API key authenticates via a header; a field mask is required per request and
 		// is set on each call because it differs (search vs details vs photo).
 		this.restClient = restClientBuilder
-			.baseUrl(properties.endpoint())
+			.requestFactory(new org.springframework.http.client.JdkClientHttpRequestFactory(
+                java.net.http.HttpClient.newBuilder().connectTimeout(properties.timeout()).build()) {{ setReadTimeout(properties.timeout()); }})
+            .baseUrl(properties.endpoint())
 			.defaultHeader("X-Goog-Api-Key", properties.apiKey())
 			.defaultHeader("Accept", "application/json")
 			.build();
@@ -56,7 +60,8 @@ public class GooglePlacesClient {
 		if (!isEnabled() || name == null || name.isBlank()) {
 			return Optional.empty();
 		}
-		try {
+		reserve();
+        try {
 			SearchResponse response = restClient.post()
 				.uri("/places:searchText")
 				.header("X-Goog-FieldMask", "places.id")
@@ -76,44 +81,12 @@ public class GooglePlacesClient {
 			return Optional.ofNullable(response.places().get(0).id());
 		}
 		catch (RestClientException ex) {
-			log.warn("Google place search failed for '{}': {}", name, ex.getMessage());
-			return Optional.empty();
+			unavailableUntil = System.currentTimeMillis() + 60_000;
+            log.warn("Google place search failed; backing off for one minute");
+            throw new GoogleUnavailableException();
 		}
 	}
 
-	/** Descriptive details for a matched place, or empty on any failure. */
-	public Optional<PlaceDetails> fetchDetails(String placeId) {
-		if (!isEnabled() || placeId == null || placeId.isBlank()) {
-			return Optional.empty();
-		}
-		try {
-			DetailsResponse response = restClient.get()
-				.uri("/places/{id}", placeId)
-				.header("X-Goog-FieldMask", "id,nationalPhoneNumber,websiteUri,formattedAddress,"
-					+ "priceLevel,rating,userRatingCount,editorialSummary,"
-					+ "regularOpeningHours.weekdayDescriptions,photos.name")
-				.retrieve()
-				.body(DetailsResponse.class);
-
-			if (response == null) {
-				return Optional.empty();
-			}
-			return Optional.of(new PlaceDetails(
-				response.nationalPhoneNumber(),
-				response.websiteUri(),
-				response.formattedAddress(),
-				response.priceLevel(),
-				response.rating(),
-				response.userRatingCount(),
-				response.editorialSummary() == null ? null : response.editorialSummary().text(),
-				response.weekdayDescriptions(),
-				response.firstPhotoName()));
-		}
-		catch (RestClientException ex) {
-			log.warn("Google place details failed for '{}': {}", placeId, ex.getMessage());
-			return Optional.empty();
-		}
-	}
 
 	/**
 	 * A short-lived, Google-hosted image URL for a photo resource name (from
@@ -125,7 +98,8 @@ public class GooglePlacesClient {
 		if (!isEnabled() || photoResourceName == null || photoResourceName.isBlank()) {
 			return Optional.empty();
 		}
-		try {
+		reserve();
+        try {
 			PhotoMedia media = restClient.get()
 				// The resource name already contains slashes ("places/.../photos/...") that
 				// are real path separators, so it's built into the path literally. Passing it
@@ -141,10 +115,36 @@ public class GooglePlacesClient {
 			return media == null ? Optional.empty() : Optional.ofNullable(media.photoUri());
 		}
 		catch (RestClientException ex) {
-			log.warn("Google photo media failed for '{}': {}", photoResourceName, ex.getMessage());
-			return Optional.empty();
+			unavailableUntil = System.currentTimeMillis() + 60_000;
+            throw new GoogleUnavailableException();
 		}
 	}
+
+    private void reserve() {
+        if (System.currentTimeMillis() < unavailableUntil || !budget.acquire()) throw new GoogleUnavailableException();
+    }
+
+    /** Photo metadata is an IDs-only request; it never asks for billable descriptive fields. */
+    public Optional<PhotoReference> fetchPhoto(String placeId) {
+        if (!isEnabled()) return Optional.empty();
+        reserve();
+        try {
+            PhotoResponse response = restClient.get().uri("/places/{id}", placeId)
+                .header("X-Goog-FieldMask", "photos,attributions").retrieve().body(PhotoResponse.class);
+            return response == null || response.photos() == null || response.photos().isEmpty()
+                ? Optional.empty() : Optional.of(response.photos().get(0));
+        } catch (RestClientException ex) {
+            unavailableUntil = System.currentTimeMillis() + 60_000;
+            throw new GoogleUnavailableException();
+        }
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record Author(String displayName, String uri) {}
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record PhotoReference(String name, java.util.List<Author> authorAttributions, String googleMapsUri) {}
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private record PhotoResponse(java.util.List<PhotoReference> photos) {}
 
 	@JsonIgnoreProperties(ignoreUnknown = true)
 	private record SearchResponse(List<PlaceRef> places) {
@@ -152,39 +152,6 @@ public class GooglePlacesClient {
 
 	@JsonIgnoreProperties(ignoreUnknown = true)
 	private record PlaceRef(String id) {
-	}
-
-	@JsonIgnoreProperties(ignoreUnknown = true)
-	private record DetailsResponse(
-			String nationalPhoneNumber,
-			String websiteUri,
-			String formattedAddress,
-			String priceLevel,
-			Double rating,
-			Integer userRatingCount,
-			LocalizedText editorialSummary,
-			OpeningHours regularOpeningHours,
-			List<PhotoRef> photos) {
-
-		List<String> weekdayDescriptions() {
-			return regularOpeningHours == null ? null : regularOpeningHours.weekdayDescriptions();
-		}
-
-		String firstPhotoName() {
-			return (photos == null || photos.isEmpty()) ? null : photos.get(0).name();
-		}
-	}
-
-	@JsonIgnoreProperties(ignoreUnknown = true)
-	private record LocalizedText(String text) {
-	}
-
-	@JsonIgnoreProperties(ignoreUnknown = true)
-	private record OpeningHours(List<String> weekdayDescriptions) {
-	}
-
-	@JsonIgnoreProperties(ignoreUnknown = true)
-	private record PhotoRef(String name) {
 	}
 
 	@JsonIgnoreProperties(ignoreUnknown = true)

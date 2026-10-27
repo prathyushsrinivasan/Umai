@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
+import type { SetStateAction } from 'react'
 
 import { fetchAreas, fetchCategories, searchRestaurants } from '../api/restaurants'
 import { RestaurantPhoto } from '../components/restaurant/RestaurantPhoto'
@@ -11,14 +12,12 @@ import { useAsync } from '../hooks/useAsync'
 import { areaLabel, categoryLabel } from '../i18n/dataLabels'
 import { useLanguage } from '../i18n/useLanguage'
 import { useRomanized } from '../i18n/useRomanized'
-import { groupByName } from '../lib/chains'
 import { FILTERABLE_VEGETARIAN_TYPES, PRICE_RANGES, VEGETARIAN_TYPE_STYLES } from '../lib/labels'
 import type { PriceRange, RestaurantSummary, VegetarianType } from '../types/restaurant'
 
 const PAGE_SIZE = 24
-// Chains are grouped client-side, so the whole matching set is fetched at once and
-// paginated here — the dataset is small enough (a few hundred) for this to be cheap.
-const FETCH_LIMIT = 500
+// The server groups matching branches before paginating.
+const FETCH_LIMIT = PAGE_SIZE
 const RATING_OPTIONS = [4, 4.5] as const
 
 function toggle<T>(list: T[], value: T): T[] {
@@ -32,25 +31,49 @@ function toggle<T>(list: T[], value: T): T[] {
 export function RestaurantsPage() {
   const { lang, t } = useLanguage()
 
-  const [keyword, setKeyword] = useState('')
-  const [debouncedKeyword, setDebouncedKeyword] = useState('')
-  const [dietTypes, setDietTypes] = useState<VegetarianType[]>([])
-  const [categorySlugs, setCategorySlugs] = useState<string[]>([])
-  const [areaSlugs, setAreaSlugs] = useState<string[]>([])
-  const [priceRanges, setPriceRanges] = useState<PriceRange[]>([])
-  const [minRating, setMinRating] = useState<number | null>(null)
-  const [page, setPage] = useState(0)
+  const [params, setParams] = useSearchParams()
+  const debouncedKeyword = params.get('keyword') ?? ''
+  const [keyword, setKeyword] = useState(debouncedKeyword)
+  const dietTypes = useMemo(() => params.getAll('vegetarianTypes').filter((value): value is VegetarianType => FILTERABLE_VEGETARIAN_TYPES.includes(value as VegetarianType)), [params])
+  const categorySlugs = useMemo(() => params.getAll('categories'), [params])
+  const areaSlugs = useMemo(() => params.getAll('areas'), [params])
+  const priceRanges = useMemo(() => params.getAll('priceRanges').filter((value): value is PriceRange => PRICE_RANGES.includes(value as PriceRange)), [params])
+  const rating = Number(params.get('minRating'))
+  const minRating = rating >= 1 && rating <= 5 ? rating : null
+  const rawPage = Number(params.get('page'))
+  const page = Number.isInteger(rawPage) && rawPage >= 0 && rawPage <= 100_000 ? rawPage : 0
 
+  useEffect(() => setKeyword(debouncedKeyword), [debouncedKeyword])
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedKeyword(keyword.trim()), 350)
+    if (keyword.trim() === debouncedKeyword) return
+    const timer = setTimeout(() => setParams(current => {
+      const next = new URLSearchParams(current)
+      if (keyword.trim()) next.set('keyword', keyword.trim()); else next.delete('keyword')
+      next.delete('page')
+      return next
+    }, { replace: true }), 350)
     return () => clearTimeout(timer)
-  }, [keyword])
+  }, [keyword, debouncedKeyword, setParams])
 
-  // Any filter change resets to the first page — otherwise a narrower search could
-  // land on a page number that no longer exists.
-  useEffect(() => {
-    setPage(0)
-  }, [debouncedKeyword, dietTypes, categorySlugs, areaSlugs, priceRanges, minRating])
+  function setList<T extends string>(key: string, change: SetStateAction<T[]>) {
+    setParams(current => {
+      const next = new URLSearchParams(current)
+      const values = typeof change === 'function' ? change(current.getAll(key) as T[]) : change
+      next.delete(key); next.delete('page')
+      values.forEach(value => next.append(key, value))
+      return next
+    })
+  }
+  const setDietTypes = (value: SetStateAction<VegetarianType[]>) => setList('vegetarianTypes', value)
+  const setCategorySlugs = (value: SetStateAction<string[]>) => setList('categories', value)
+  const setAreaSlugs = (value: SetStateAction<string[]>) => setList('areas', value)
+  const setPriceRanges = (value: SetStateAction<PriceRange[]>) => setList('priceRanges', value)
+  function setMinRating(value: number | null) {
+    setParams(current => { const next = new URLSearchParams(current); next.delete('page'); if (value === null) next.delete('minRating'); else next.set('minRating', String(value)); return next })
+  }
+  function setPage(change: SetStateAction<number>) {
+    setParams(current => { const next = new URLSearchParams(current); const value = typeof change === 'function' ? change(page) : change; next.set('page', String(value)); return next })
+  }
 
   const loadCategories = useCallback((signal: AbortSignal) => fetchCategories(signal), [])
   const categories = useAsync(loadCategories)
@@ -68,31 +91,27 @@ export function RestaurantsPage() {
           priceRanges: priceRanges.length ? priceRanges : undefined,
           minRating: minRating ?? undefined,
           size: FETCH_LIMIT,
+          page,
+          groupByName: true,
         },
         signal,
       ),
-    [debouncedKeyword, dietTypes, categorySlugs, areaSlugs, priceRanges, minRating],
+    [debouncedKeyword, dietTypes, categorySlugs, areaSlugs, priceRanges, minRating, page],
   )
   const results = useAsync(loadResults)
 
-  // Collapse chains to one entry, then paginate the unique list client-side.
-  const groups = useMemo(() => groupByName(results.data?.content ?? []), [results.data])
-  const totalPages = Math.max(1, Math.ceil(groups.length / PAGE_SIZE))
-  const pageGroups = groups.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE)
+  // Each item represents a chain group already selected and counted by the server.
+  const groups = useMemo(() => (results.data?.content ?? []).map((restaurant) => ({
+    representative: restaurant, branchCount: restaurant.branchCount ?? 1,
+  })), [results.data])
+  const totalPages = Math.max(1, results.data?.totalPages ?? 1)
+  const pageGroups = groups
 
   const hasActiveFilters = Boolean(
     debouncedKeyword || dietTypes.length || categorySlugs.length || areaSlugs.length || priceRanges.length || minRating,
   )
 
-  function clearFilters() {
-    setKeyword('')
-    setDebouncedKeyword('')
-    setDietTypes([])
-    setCategorySlugs([])
-    setAreaSlugs([])
-    setPriceRanges([])
-    setMinRating(null)
-  }
+  function clearFilters() { setKeyword(''); setParams({}) }
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-5">
@@ -202,7 +221,7 @@ export function RestaurantsPage() {
 
         {results.data && !results.loading && !results.error && (
           <>
-            <p className="text-sm text-bark-400">{t.browsePage.resultCount(groups.length)}</p>
+            <p className="text-sm text-bark-400">{t.browsePage.resultCount(results.data.totalElements)}</p>
 
             {pageGroups.length === 0 ? (
               <div className="mt-4">
@@ -212,7 +231,7 @@ export function RestaurantsPage() {
               <ul className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {pageGroups.map((group) => (
                   <li key={group.representative.id}>
-                    <BrowseCard restaurant={group.representative} branchCount={group.members.length} />
+                    <BrowseCard restaurant={group.representative} branchCount={group.branchCount} />
                   </li>
                 ))}
               </ul>

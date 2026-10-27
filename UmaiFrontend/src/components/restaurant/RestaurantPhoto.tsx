@@ -29,7 +29,7 @@ export function RestaurantPhoto({ imageUrl, name, categories, className = 'h-48 
   const [failed, setFailed] = useState(false)
   const { lang } = useLanguage()
 
-  if (imageUrl && !failed) {
+  if (imageUrl && !imageUrl.startsWith('/api/v1/restaurants/') && !failed) {
     return (
       <img
         src={imageUrl}

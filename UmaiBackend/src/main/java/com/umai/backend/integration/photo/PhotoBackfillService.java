@@ -61,7 +61,8 @@ public class PhotoBackfillService {
 	 *
 	 * @throws IllegalStateException if no photo provider is configured
 	 */
-	public PhotoBackfillResult backfill(int limit) {
+	@org.springframework.cache.annotation.CacheEvict(cacheNames = "restaurantReads", allEntries = true)
+    public PhotoBackfillResult backfill(int limit) {
 		if (!isAvailable()) {
 			throw new IllegalStateException("No photo provider is configured");
 		}

@@ -44,10 +44,14 @@ public class RestaurantImportService {
 	private final AreaMatcher areaMatcher;
 
 	private final List<RestaurantDataProvider> providers;
+    private final org.springframework.transaction.support.TransactionTemplate transactions;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbc;
 
 	public RestaurantImportService(RestaurantRepository restaurantRepository,
 			CategoryRepository categoryRepository, AreaRepository areaRepository,
-			AreaMatcher areaMatcher, List<RestaurantDataProvider> providers) {
+			AreaMatcher areaMatcher, List<RestaurantDataProvider> providers, org.springframework.transaction.support.TransactionTemplate transactions, org.springframework.jdbc.core.JdbcTemplate jdbc) {
+        this.jdbc = jdbc;
+        this.transactions = transactions;
 		this.restaurantRepository = restaurantRepository;
 		this.categoryRepository = categoryRepository;
 		this.areaRepository = areaRepository;
@@ -60,15 +64,26 @@ public class RestaurantImportService {
 	 *
 	 * @param sourceName provider identifier, matching a {@code RestaurantSource} value
 	 */
-	@Transactional
+    @org.springframework.cache.annotation.CacheEvict(cacheNames = "restaurantReads", allEntries = true)
 	public ImportResult importFrom(String sourceName, MapBounds bounds, int limit) {
 		RestaurantDataProvider provider = providers.stream()
 			.filter(candidate -> candidate.source().name().equalsIgnoreCase(sourceName))
 			.findFirst()
 			.orElseThrow(() -> new IllegalArgumentException("Unknown data source: " + sourceName));
 
-		List<ExternalRestaurant> fetched = provider.fetchWithin(bounds, limit);
-		log.info("Fetched {} records from {}", fetched.size(), provider.source());
+        var batch = provider.fetchBatch(bounds, limit);
+        return saveBatch(batch, java.time.Instant.now());
+    }
+
+    public ImportResult saveBatch(RestaurantDataProvider.Batch batch, java.time.Instant fetchedAt) {
+        return transactions.execute(status -> applyBatch(batch, fetchedAt));
+    }
+
+    private ImportResult applyBatch(RestaurantDataProvider.Batch batch, java.time.Instant fetchedAt) {
+        // Serialize upserts across scheduled and admin imports without holding a
+        // transaction open while waiting for the external provider.
+        jdbc.execute("SELECT pg_advisory_xact_lock(19731, 2)");
+        var fetched = batch.restaurants();
 
 		Map<String, Category> categoriesBySlug = categoryRepository.findAll().stream()
 			.collect(Collectors.toMap(Category::getSlug, Function.identity()));
@@ -84,6 +99,7 @@ public class RestaurantImportService {
 
 			if (existing.isPresent()) {
 				if (applyUpdate(existing.get(), external, categoriesBySlug, areas)) {
+                    existing.get().setLastSyncedAt(fetchedAt);
 					updated++;
 				}
 				else {
@@ -91,13 +107,15 @@ public class RestaurantImportService {
 				}
 			}
 			else {
-				restaurantRepository.save(toEntity(external, categoriesBySlug, areas));
+				var restaurant = toEntity(external, categoriesBySlug, areas);
+                restaurant.setLastSyncedAt(fetchedAt);
+                restaurantRepository.save(restaurant);
 				created++;
 			}
 		}
 
-		ImportResult result = new ImportResult(fetched.size(), created, updated, skipped);
-		log.info("Import from {} finished: {}", provider.source(), result);
+		ImportResult result = new ImportResult(fetched.size(), created, updated, skipped, batch.truncated());
+		log.info("Import finished: {}", result);
 		return result;
 	}
 
@@ -111,6 +129,7 @@ public class RestaurantImportService {
 
 		restaurant.setSourceExternalId(external.externalId());
 		restaurant.setStatus(RestaurantStatus.PUBLISHED);
+        restaurant.setLastSyncedAt(java.time.Instant.now());
 		copyOptionalFields(restaurant, external);
 		applyCategories(restaurant, external, categoriesBySlug);
 		assignAreaIfMissing(restaurant, areas);
@@ -131,15 +150,14 @@ public class RestaurantImportService {
 			return false;
 		}
 
-		restaurant.setName(external.name());
+        restaurant.setLastSyncedAt(java.time.Instant.now());
+        if (restaurant.isManuallyMaintained()) return true;
+        restaurant.setName(external.name());
 		restaurant.setLatitude(external.latitude());
 		restaurant.setLongitude(external.longitude());
 
-		// Never downgrade a known classification to UNKNOWN: a tag removed upstream
-		// should not erase information we already had.
-		if (external.vegetarianType() != com.umai.backend.restaurant.VegetarianType.UNKNOWN) {
-			restaurant.setVegetarianType(external.vegetarianType());
-		}
+        // Current ambiguous source data must not retain an obsolete vegan claim.
+        restaurant.setVegetarianType(external.vegetarianType());
 
 		copyOptionalFields(restaurant, external);
 		applyCategories(restaurant, external, categoriesBySlug);

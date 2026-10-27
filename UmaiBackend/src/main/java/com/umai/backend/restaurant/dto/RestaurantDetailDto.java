@@ -42,5 +42,8 @@ public record RestaurantDetailDto(
 		@Schema(nullable = true, description = "Google Places ID（マップ・メニューへのリンク用）") String googlePlaceId,
 		@Schema(description = "データの出所。SEED は開発用のダミーデータ") RestaurantSource source,
 		Instant createdAt,
-		Instant updatedAt) {
+		Instant updatedAt,
+        Instant lastSyncedAt,
+        Instant lastVerifiedAt,
+        boolean manuallyMaintained) {
 }

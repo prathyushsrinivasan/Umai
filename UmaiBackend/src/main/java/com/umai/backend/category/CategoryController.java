@@ -20,6 +20,7 @@ public class CategoryController {
 		this.categoryRepository = categoryRepository;
 	}
 
+    @org.springframework.cache.annotation.Cacheable(cacheNames = "referenceData", key = "'category'")
 	@GetMapping
 	@Operation(summary = "料理ジャンル一覧", description = "表示順に並べた料理ジャンルを返します。")
 	public List<CategoryDto> list() {

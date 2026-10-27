@@ -7,6 +7,7 @@ import { ApiError } from '../api/client'
 import { RestaurantMiniMap } from '../components/map/RestaurantMiniMap'
 import { RestaurantPhoto } from '../components/restaurant/RestaurantPhoto'
 import { ReviewSection } from '../components/restaurant/ReviewSection'
+import { RestaurantDataInfo } from '../components/restaurant/RestaurantDataInfo'
 import { Chip } from '../components/ui/Chip'
 import { Icon } from '../components/ui/Icon'
 import { Mascot } from '../components/ui/Mascot'
@@ -262,6 +263,8 @@ export function RestaurantDetailPage() {
           </div>
         )}
       </section>
+
+      <RestaurantDataInfo key={restaurant.id} restaurant={restaurant} />
 
       {/* Reloading the restaurant after a review change refreshes the aggregate
           rating in the header, which is derived from review data. */}

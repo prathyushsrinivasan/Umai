@@ -17,8 +17,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Administrative Google Places enrichment: matches restaurants to Google, fills missing
- * descriptive fields, and links live cover photos.
+ * Administrative matching to Google place identifiers. Descriptive Google fields
+ * are not persisted; photos are requested separately by the visitor.
  *
  * <p>ADMIN-only — it writes to the public dataset and calls a rate-limited third party.
  * Synchronous and bounded: each call processes at most {@code limit} restaurants, so an

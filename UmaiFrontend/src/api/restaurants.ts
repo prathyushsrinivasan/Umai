@@ -66,14 +66,31 @@ export function createRestaurant(request: CreateRestaurantRequest): Promise<Rest
   return apiRequest<RestaurantDetail>('/restaurants', { method: 'POST', body: request })
 }
 
+// These three public lookup lists are shared across routes. Keep a bounded,
+// short-lived cache; one component unmounting must not cancel another's request.
+const referenceCache = new Map<string, { expires: number; promise: Promise<unknown> }>()
+function referenceData<T>(path: string, signal?: AbortSignal): Promise<T> {
+  if (signal?.aborted) return Promise.reject(new DOMException('Aborted', 'AbortError'))
+  let entry = referenceCache.get(path)
+  if (!entry || entry.expires < Date.now()) {
+    const promise = apiRequest<T>(path).catch(error => { referenceCache.delete(path); throw error })
+    entry = { expires: Date.now() + 300_000, promise }
+    referenceCache.set(path, entry)
+  }
+  return entry.promise.then(value => {
+    if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
+    return value as T
+  })
+}
+
 export function fetchCategories(signal?: AbortSignal): Promise<Category[]> {
-  return apiRequest<Category[]>('/categories', { signal })
+  return referenceData<Category[]>('/categories', signal)
 }
 
 export function fetchAreas(signal?: AbortSignal): Promise<Area[]> {
-  return apiRequest<Area[]>('/areas', { signal })
+  return referenceData<Area[]>('/areas', signal)
 }
 
 export function fetchTags(signal?: AbortSignal): Promise<Tag[]> {
-  return apiRequest<Tag[]>('/tags', { signal })
+  return referenceData<Tag[]>('/tags', signal)
 }

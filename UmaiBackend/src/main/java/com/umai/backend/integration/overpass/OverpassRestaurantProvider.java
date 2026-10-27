@@ -42,7 +42,9 @@ public class OverpassRestaurantProvider implements RestaurantDataProvider {
 		this.properties = properties;
 		this.tagMapper = tagMapper;
 		this.restClient = restClientBuilder
-			.baseUrl(properties.endpoint())
+			.requestFactory(new org.springframework.http.client.JdkClientHttpRequestFactory(
+                java.net.http.HttpClient.newBuilder().connectTimeout(java.time.Duration.ofSeconds(10)).build()) {{ setReadTimeout(properties.timeout().plusSeconds(10)); }})
+            .baseUrl(properties.endpoint())
 			// Overpass asks clients to identify themselves so abusive traffic can be
 			// traced; an anonymous client risks being blocked.
 			.defaultHeader("User-Agent", properties.userAgent())
@@ -56,6 +58,11 @@ public class OverpassRestaurantProvider implements RestaurantDataProvider {
 
 	@Override
 	public List<ExternalRestaurant> fetchWithin(MapBounds bounds, int limit) {
+        return fetchBatch(bounds, limit).restaurants();
+    }
+
+    @Override
+    public Batch fetchBatch(MapBounds bounds, int limit) {
 		int effectiveLimit = Math.min(limit, properties.maxElements());
 		String query = buildQuery(bounds, effectiveLimit);
 
@@ -63,7 +70,7 @@ public class OverpassRestaurantProvider implements RestaurantDataProvider {
 		try {
 			response = restClient.post()
 				.contentType(MediaType.APPLICATION_FORM_URLENCODED)
-				.body("data=" + query)
+				.body(new org.springframework.util.LinkedMultiValueMap<>(java.util.Map.of("data", java.util.List.of(query))))
 				.retrieve()
 				.body(OverpassResponse.class);
 		}
@@ -75,7 +82,10 @@ public class OverpassRestaurantProvider implements RestaurantDataProvider {
 			throw new ExternalDataException("Overpass API returned an empty response");
 		}
 
-		return normalise(response, effectiveLimit);
+		if (response.remark() != null && !response.remark().isBlank()) {
+            throw new ExternalDataException("Overpass returned incomplete data", new IllegalStateException("Incomplete source response"));
+        }
+        return new Batch(normalise(response, effectiveLimit), response.elements().size() >= effectiveLimit);
 	}
 
 	/**
@@ -134,7 +144,7 @@ public class OverpassRestaurantProvider implements RestaurantDataProvider {
 	 * building-mapped restaurants still yield coordinates.
 	 */
 	private String buildQuery(MapBounds bounds, int limit) {
-		String box = "%f,%f,%f,%f".formatted(
+		String box = String.format(java.util.Locale.ROOT, "%f,%f,%f,%f",
 			bounds.minLat(), bounds.minLon(), bounds.maxLat(), bounds.maxLon());
 
 		return """

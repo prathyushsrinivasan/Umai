@@ -23,6 +23,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 @Documented
 @Inherited
 @SpringBootTest
-@EnabledIf("com.umai.backend.support.DockerAvailability#isAvailable")
+@EnabledIf("com.umai.backend.support.DockerAvailability#isPostgisAvailable")
 public @interface PostgisIntegrationTest {
 }

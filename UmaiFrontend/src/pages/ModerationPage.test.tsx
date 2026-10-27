@@ -8,6 +8,10 @@ import { makeRestaurant } from '../test/fixtures'
 import { renderWithProviders, testAdmin, testUser } from '../test/renderWithProviders'
 import * as moderationApi from '../api/moderation'
 
+vi.mock('../api/reports', () => ({
+  fetchReports: vi.fn().mockResolvedValue({ content: [], page: 0, size: 20, totalElements: 0, totalPages: 0, first: true, last: true }),
+}))
+
 vi.mock('../api/moderation')
 
 const mocked = vi.mocked(moderationApi)

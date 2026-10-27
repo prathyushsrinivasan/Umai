@@ -16,10 +16,8 @@ public record SubmissionProperties(boolean autoPublish) {
 	/**
 	 * The status a new submission receives.
 	 *
-	 * <p>Defaults to publishing immediately: there is no moderation queue yet, so
-	 * PENDING submissions would be invisible to everyone including their author.
-	 * The switch exists so enabling moderation later is a config change, not a
-	 * migration.
+	 * <p>Production defaults to PENDING. The moderation queue publishes reviewed
+	 * submissions; immediate publication remains an explicit configuration option.
 	 */
 	public RestaurantStatus statusForNewSubmission() {
 		return autoPublish ? RestaurantStatus.PUBLISHED : RestaurantStatus.PENDING;

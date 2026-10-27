@@ -30,6 +30,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * fails these tests before any assertion runs.
  */
 @PostgisIntegrationTest
+@org.springframework.transaction.annotation.Transactional
 class SchemaAndSeedIntegrationTests extends AbstractPostgisIntegrationTest {
 
 	@Autowired
@@ -137,7 +138,7 @@ class SchemaAndSeedIntegrationTests extends AbstractPostgisIntegrationTest {
 
 		assertThat(indexes).contains(
 			"ix_restaurants_location",
-			"ix_restaurants_name_trgm",
+			"ix_restaurants_name_lower_trgm",
 			"uq_restaurants_source_external");
 	}
 

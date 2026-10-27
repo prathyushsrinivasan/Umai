@@ -68,9 +68,10 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
 		long now = Instant.now().toEpochMilli();
 		boolean authEndpoint = isAuthEndpoint(request);
+        boolean photoEndpoint = request.getRequestURI().matches("/api/v1/restaurants/[0-9]+/photo");
 
-		String key = (authEndpoint ? "auth:" : "write:") + clientIdentifier(request);
-		int capacity = authEndpoint ? properties.authAttempts() : properties.writeRequests();
+		String key = (authEndpoint ? "auth:" : photoEndpoint ? "photo:" : "write:") + clientIdentifier(request);
+		int capacity = authEndpoint ? properties.authAttempts() : photoEndpoint ? properties.photoRequests() : properties.writeRequests();
 
 		TokenBucket bucket = buckets.computeIfAbsent(key,
 			ignored -> new TokenBucket(capacity, properties.period().toMillis(), now));
@@ -88,7 +89,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
 	}
 
 	private boolean isRateLimited(HttpServletRequest request) {
-		if (isAuthEndpoint(request)) {
+		if (request.getRequestURI().matches("/api/v1/restaurants/[0-9]+/photo") || isAuthEndpoint(request)) {
 			return true;
 		}
 		String method = request.getMethod();

@@ -65,20 +65,21 @@ public class RestaurantController {
 		summary = "レストラン検索",
 		description = "キーワードと絞り込み条件を組み合わせて検索します。条件は AND、リスト内は OR で結合されます。")
 	public PageResponse<RestaurantSummaryDto> search(
-			@Parameter(description = "店名・説明・住所に対する部分一致") @RequestParam(required = false) String keyword,
-			@Parameter(description = "ヴィーガン・ベジタリアン区分") @RequestParam(required = false) List<VegetarianType> vegetarianTypes,
-			@Parameter(description = "料理ジャンルの slug") @RequestParam(required = false) List<String> categories,
-			@Parameter(description = "タグの slug（すべて満たすもの）") @RequestParam(required = false) List<String> tags,
-			@Parameter(description = "エリアの slug") @RequestParam(required = false) List<String> areas,
-			@Parameter(description = "価格帯") @RequestParam(required = false) List<PriceRange> priceRanges,
+			@Parameter(description = "店名・説明・住所に対する部分一致") @RequestParam(required = false) @jakarta.validation.constraints.Size(max=100) String keyword,
+			@Parameter(description = "ヴィーガン・ベジタリアン区分") @RequestParam(required = false) @jakarta.validation.constraints.Size(max=20) List<VegetarianType> vegetarianTypes,
+			@Parameter(description = "料理ジャンルの slug") @RequestParam(required = false) @jakarta.validation.constraints.Size(max=20) List<String> categories,
+			@Parameter(description = "タグの slug（すべて満たすもの）") @RequestParam(required = false) @jakarta.validation.constraints.Size(max=20) List<String> tags,
+			@Parameter(description = "エリアの slug") @RequestParam(required = false) @jakarta.validation.constraints.Size(max=20) List<String> areas,
+			@Parameter(description = "価格帯") @RequestParam(required = false) @jakarta.validation.constraints.Size(max=20) List<PriceRange> priceRanges,
 			@Parameter(description = "平均評価の下限。未評価の店舗は除外されます")
 			@RequestParam(required = false) @Min(1) @Max(5) Double minRating,
-			@PageableDefault(size = 20, sort = "name") Pageable pageable) {
+			@RequestParam(defaultValue = "false") boolean groupByName,
+            @PageableDefault(size = 20, sort = "name") Pageable pageable) {
 
 		RestaurantSearchCriteria criteria = new RestaurantSearchCriteria(
 			keyword, vegetarianTypes, categories, tags, areas, priceRanges, minRating);
 
-		return restaurantService.search(criteria, sanitiseSort(pageable));
+		return restaurantService.search(criteria, sanitiseSort(pageable), groupByName);
 	}
 
 	@GetMapping("/map")
@@ -89,11 +90,14 @@ public class RestaurantController {
 			@Parameter(description = "南端の緯度", required = true) @RequestParam double minLat,
 			@Parameter(description = "西端の経度", required = true) @RequestParam double minLon,
 			@Parameter(description = "北端の緯度", required = true) @RequestParam double maxLat,
-			@Parameter(description = "東端の経度", required = true) @RequestParam double maxLon) {
+			@Parameter(description = "東端の経度", required = true) @RequestParam double maxLon,
+            @RequestParam(required = false) @jakarta.validation.constraints.Size(max=20) List<VegetarianType> vegetarianTypes,
+            @RequestParam(required = false) @jakarta.validation.constraints.Size(max=20) List<String> categories) {
 
 		// MapBounds validates the box and throws IllegalArgumentException, which the
 		// global handler renders as a 400.
-		return restaurantService.findInBounds(new MapBounds(minLat, minLon, maxLat, maxLon));
+		return restaurantService.findInBounds(new MapBounds(minLat, minLon, maxLat, maxLon),
+            new RestaurantSearchCriteria(null, vegetarianTypes, categories, null, null, null, null));
 	}
 
 	@GetMapping("/featured")
@@ -133,7 +137,7 @@ public class RestaurantController {
 
 		Sort effective = filtered.isSorted() ? filtered : Sort.by(Sort.Direction.ASC, "name");
 		return org.springframework.data.domain.PageRequest.of(
-			pageable.getPageNumber(), pageable.getPageSize(), effective);
+			pageable.getPageNumber(), Math.min(pageable.getPageSize(), 100), effective);
 	}
 
 }

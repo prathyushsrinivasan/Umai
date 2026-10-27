@@ -1,3 +1,5 @@
+> Historical notes from July 2026. See README.md for current data refresh, pagination, cost controls, and verification. V4 already includes 295 real OSM listings; older statements below about having only fictional data or no photo integration are obsolete.
+
 # Known issues and outstanding work
 
 State of the project as of 2026-07-23.

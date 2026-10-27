@@ -14,7 +14,7 @@ export const TOKYO_CENTER: [number, number] = [35.6812, 139.7671]
 
 export const TOKYO_DEFAULT_ZOOM = 12
 
-export const OSM_TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+export const OSM_TILE_URL = import.meta.env.VITE_OSM_TILE_URL || 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
 
 /** Attribution is required by the OpenStreetMap licence (ODbL). */
 export const OSM_ATTRIBUTION =

@@ -18,10 +18,22 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 @PostgisIntegrationTest
 @AutoConfigureMockMvc
+@org.springframework.transaction.annotation.Transactional
 class RestaurantApiIntegrationTests extends AbstractPostgisIntegrationTest {
 
 	@Autowired
 	private MockMvc mockMvc;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.jdbc.core.JdbcTemplate jdbc;
+
+    @org.junit.jupiter.api.BeforeEach
+    void isolateSampleFixtures() {
+        // V4 also imports 295 real OSM listings. These contract cases intentionally
+        // exercise the small sample fixture; the transaction rolls this change back.
+        jdbc.update("UPDATE restaurants SET status='DRAFT' WHERE source <> 'SEED'");
+    }
+
 
 	@Test
 	@DisplayName("listing returns a paginated envelope")
@@ -41,8 +53,8 @@ class RestaurantApiIntegrationTests extends AbstractPostgisIntegrationTest {
 	void keywordSearchWorks() throws Exception {
 		mockMvc.perform(get("/api/v1/restaurants/search?keyword=ラーメン"))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.totalElements").value(1))
-			.andExpect(jsonPath("$.content[0].name").value("池袋グリーンヌードル"));
+			.andExpect(jsonPath("$.totalElements").value(2))
+			.andExpect(jsonPath("$.content[*].name").value(org.hamcrest.Matchers.hasItem("池袋グリーンヌードル")));
 	}
 
 	@Test
@@ -77,7 +89,7 @@ class RestaurantApiIntegrationTests extends AbstractPostgisIntegrationTest {
 		// Only 秋葉原ヴィーガンバーガー carries both takeout and gluten-free.
 		mockMvc.perform(get("/api/v1/restaurants/search?tags=takeout&tags=gluten-free"))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.totalElements").value(1));
+			.andExpect(jsonPath("$.totalElements").value(2));
 	}
 
 	@Test

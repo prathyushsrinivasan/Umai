@@ -12,10 +12,12 @@ public final class DockerAvailability {
 	 * Cached because Testcontainers refuses to retry after a failed probe, and the
 	 * result cannot change during a build.
 	 */
-	private static final boolean AVAILABLE = probe();
+	private static final boolean AVAILABLE = System.getenv("UMAI_TEST_DB_URL") == null && probe();
 
 	private DockerAvailability() {
 	}
+
+	public static boolean isPostgisAvailable() { return System.getenv("UMAI_TEST_DB_URL") != null || AVAILABLE; }
 
 	public static boolean isAvailable() {
 		return AVAILABLE;

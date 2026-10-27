@@ -22,7 +22,11 @@ import com.umai.backend.tag.TagDto;
 public class RestaurantMapper {
 
 	public RestaurantSummaryDto toSummary(Restaurant restaurant, RatingSummary rating) {
-		return new RestaurantSummaryDto(
+		return toSummary(restaurant, rating, 1);
+    }
+
+    public RestaurantSummaryDto toSummary(Restaurant restaurant, RatingSummary rating, long branchCount) {
+        return new RestaurantSummaryDto(
 			restaurant.getId(),
 			restaurant.getName(),
 			restaurant.getDescription(),
@@ -31,13 +35,13 @@ public class RestaurantMapper {
 			restaurant.getLongitude(),
 			restaurant.getVegetarianType(),
 			restaurant.getPriceRange(),
-			restaurant.getImageUrl(),
+			safeImage(restaurant.getImageUrl()),
 			restaurant.getArea() == null ? null : AreaDto.from(restaurant.getArea()),
 			toCategoryDtos(restaurant),
 			rating.averageRating(),
 			rating.reviewCount(),
-			restaurant.getGoogleRating(),
-			restaurant.getGoogleRatingCount());
+			null,
+			null, branchCount);
 	}
 
 	public RestaurantDetailDto toDetail(Restaurant restaurant, RatingSummary rating) {
@@ -58,21 +62,25 @@ public class RestaurantMapper {
 			restaurant.getWebsiteUrl(),
 			restaurant.getPhone(),
 			restaurant.getOpeningHours(),
-			restaurant.getImageUrl(),
+			safeImage(restaurant.getImageUrl()),
 			restaurant.getArea() == null ? null : AreaDto.from(restaurant.getArea()),
 			toCategoryDtos(restaurant),
 			tags,
 			rating.averageRating(),
 			rating.reviewCount(),
-			restaurant.getGoogleRating(),
-			restaurant.getGoogleRatingCount(),
+			null,
+			null,
 			restaurant.getGooglePlaceId(),
 			restaurant.getSource(),
 			restaurant.getCreatedAt(),
-			restaurant.getUpdatedAt());
+			restaurant.getUpdatedAt(), restaurant.getLastSyncedAt(), restaurant.getLastVerifiedAt(), restaurant.isManuallyMaintained());
 	}
 
-	private List<CategoryDto> toCategoryDtos(Restaurant restaurant) {
+	private String safeImage(String url) {
+        return url != null && url.startsWith("/api/v1/restaurants/") ? null : url;
+    }
+
+    private List<CategoryDto> toCategoryDtos(Restaurant restaurant) {
 		return restaurant.getCategories().stream()
 			.sorted(Comparator.comparingInt(category -> category.getDisplayOrder()))
 			.map(CategoryDto::from)

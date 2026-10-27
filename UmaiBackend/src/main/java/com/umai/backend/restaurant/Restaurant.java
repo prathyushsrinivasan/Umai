@@ -137,11 +137,37 @@ public class Restaurant extends Auditable {
 	private Integer googleRatingCount;
 
 	/**
-	 * Whether the Google enrichment job has processed this row yet. Set once, regardless of
-	 * whether a match was found, so enrichment never retries the same row indefinitely.
+	 * Whether matching succeeded. Failures and no-matches remain eligible after their
+	 * recorded retry time; they are never marked as successful enrichment.
 	 */
 	@Column(name = "google_enriched", nullable = false)
 	private boolean googleEnriched = false;
+
+    @Column(name = "last_synced_at")
+    private java.time.Instant lastSyncedAt;
+    @Column(name = "last_verified_at")
+    private java.time.Instant lastVerifiedAt;
+    @Column(name = "manually_maintained", nullable = false)
+    private boolean manuallyMaintained;
+    @Column(name = "google_attempted_at")
+    private java.time.Instant googleAttemptedAt;
+    @Column(name = "google_retry_after")
+    private java.time.Instant googleRetryAfter;
+    @Column(name = "google_failures", nullable = false)
+    private int googleFailures;
+
+    public java.time.Instant getLastSyncedAt() { return lastSyncedAt; }
+    public void setLastSyncedAt(java.time.Instant value) { lastSyncedAt = value; }
+    public java.time.Instant getLastVerifiedAt() { return lastVerifiedAt; }
+    public void setLastVerifiedAt(java.time.Instant value) { lastVerifiedAt = value; }
+    public boolean isManuallyMaintained() { return manuallyMaintained; }
+    public void setManuallyMaintained(boolean value) { manuallyMaintained = value; }
+    public java.time.Instant getGoogleAttemptedAt() { return googleAttemptedAt; }
+    public void setGoogleAttemptedAt(java.time.Instant value) { googleAttemptedAt = value; }
+    public java.time.Instant getGoogleRetryAfter() { return googleRetryAfter; }
+    public void setGoogleRetryAfter(java.time.Instant value) { googleRetryAfter = value; }
+    public int getGoogleFailures() { return googleFailures; }
+    public void setGoogleFailures(int value) { googleFailures = value; }
 
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "area_id")

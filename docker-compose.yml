@@ -28,22 +28,27 @@ services:
       db:
         condition: service_healthy
     environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
       DB_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-umai}
       DB_USERNAME: ${POSTGRES_USER:-umai}
       DB_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
-      # Includes the fictional development seed data by default.
-      # Production must use `classpath:db/migration` alone.
-      FLYWAY_LOCATIONS: ${FLYWAY_LOCATIONS:-classpath:db/migration,classpath:db/seed}
+      # V4 includes real OSM listings; fictional samples require the dev profile.
+      FLYWAY_LOCATIONS: ${FLYWAY_LOCATIONS:-classpath:db/migration}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set in .env (openssl rand -base64 48)}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-12h}
-      SUBMISSIONS_AUTO_PUBLISH: ${SUBMISSIONS_AUTO_PUBLISH:-true}
+      SUBMISSIONS_AUTO_PUBLISH: ${SUBMISSIONS_AUTO_PUBLISH:-false}
       UMAI_ADMIN_EMAILS: ${UMAI_ADMIN_EMAILS:-}
       # Optional: enables real restaurant photos (admin backfill). Empty = disabled.
       FOURSQUARE_API_KEY: ${FOURSQUARE_API_KEY:-}
       # Optional: Google Places API (New) key. Enables admin enrichment (details + live
       # cover photos) at /api/v1/admin/google. Empty = disabled.
+      UMAI_REFRESH_ENABLED: ${UMAI_REFRESH_ENABLED:-true}
+      UMAI_REFRESH_MAX_REQUESTS: ${UMAI_REFRESH_MAX_REQUESTS:-64}
+      GOOGLE_DAILY_REQUESTS: ${GOOGLE_DAILY_REQUESTS:-100}
+      GOOGLE_MONTHLY_REQUESTS: ${GOOGLE_MONTHLY_REQUESTS:-1000}
+      GOOGLE_PHOTOS_ENABLED: ${GOOGLE_PHOTOS_ENABLED:-true}
       GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY:-}
       # Set true to run the Google enrichment once on startup (no admin login needed).
       UMAI_GOOGLE_ENRICH_ON_START: ${UMAI_GOOGLE_ENRICH_ON_START:-false}

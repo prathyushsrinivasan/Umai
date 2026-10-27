@@ -21,11 +21,13 @@ public record RateLimitProperties(
 		boolean enabled,
 		int authAttempts,
 		int writeRequests,
+        int photoRequests,
 		Duration period) {
 
 	public RateLimitProperties {
 		authAttempts = authAttempts <= 0 ? 10 : authAttempts;
 		writeRequests = writeRequests <= 0 ? 60 : writeRequests;
+        photoRequests = photoRequests <= 0 ? 10 : photoRequests;
 		period = period == null ? Duration.ofMinutes(1) : period;
 	}
 

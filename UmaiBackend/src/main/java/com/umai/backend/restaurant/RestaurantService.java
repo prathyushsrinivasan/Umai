@@ -43,6 +43,8 @@ public class RestaurantService {
 	static final int MAX_MAP_RESULTS = 300;
 
 	private final RestaurantRepository restaurantRepository;
+    private final RestaurantReadRepository reads;
+    private final com.umai.backend.config.DataProperties dataProperties;
 
 	private final ReviewRepository reviewRepository;
 
@@ -58,7 +60,10 @@ public class RestaurantService {
 
 	public RestaurantService(RestaurantRepository restaurantRepository, ReviewRepository reviewRepository,
 			RestaurantMapper mapper, AreaRepository areaRepository, CategoryRepository categoryRepository,
-			UserService userService, SubmissionProperties submissionProperties) {
+			UserService userService, SubmissionProperties submissionProperties,
+            RestaurantReadRepository reads, com.umai.backend.config.DataProperties dataProperties) {
+        this.reads = reads;
+        this.dataProperties = dataProperties;
 		this.restaurantRepository = restaurantRepository;
 		this.reviewRepository = reviewRepository;
 		this.mapper = mapper;
@@ -75,6 +80,7 @@ public class RestaurantService {
 	 * client cannot masquerade a submission as imported data or self-approve it.
 	 */
 	@Transactional
+    @org.springframework.cache.annotation.CacheEvict(cacheNames = "restaurantReads", allEntries = true)
 	public RestaurantDetailDto create(CreateRestaurantRequest request) {
 		User submitter = userService.requireEntity(CurrentUser.requireId());
 
@@ -118,20 +124,40 @@ public class RestaurantService {
 	}
 
 	/** Paginated search across all supported filters. */
-	public PageResponse<RestaurantSummaryDto> search(RestaurantSearchCriteria criteria, Pageable pageable) {
-		Page<Restaurant> page = restaurantRepository.findAll(RestaurantSpecifications.from(criteria), pageable);
-		Map<Long, RatingSummary> ratings = loadRatings(page.getContent());
+    public PageResponse<RestaurantSummaryDto> search(RestaurantSearchCriteria criteria, Pageable pageable) {
+        return search(criteria, pageable, false);
+    }
 
-		return PageResponse.of(page, restaurant -> mapper.toSummary(restaurant, ratingFor(ratings, restaurant)));
-	}
+    @org.springframework.cache.annotation.Cacheable(cacheNames = "restaurantReads")
+    public PageResponse<RestaurantSummaryDto> search(RestaurantSearchCriteria criteria, Pageable pageable, boolean grouped) {
+        var matches = reads.search(criteria, pageable, grouped, dataProperties.includeSeed());
+        var summaries = summaries(matches);
+        return new PageResponse<>(summaries, pageable.getPageNumber(), pageable.getPageSize(), matches.total(),
+            (int) Math.ceil((double) matches.total() / pageable.getPageSize()), pageable.getPageNumber() == 0,
+            pageable.getOffset() + summaries.size() >= matches.total());
+    }
+
+    private List<RestaurantSummaryDto> summaries(RestaurantReadRepository.Matches matches) {
+        var restaurants = restaurantRepository.findByIdIn(matches.rows().stream().map(RestaurantReadRepository.Match::id).toList());
+        var byId = restaurants.stream().collect(Collectors.toMap(Restaurant::getId, Function.identity()));
+        var ratings = loadRatings(restaurants);
+        return matches.rows().stream().map(match -> {
+            var restaurant = byId.get(match.id());
+            return mapper.toSummary(restaurant, ratingFor(ratings, restaurant), match.branchCount());
+        }).toList();
+    }
 
 	/** Full detail for one published restaurant. */
-	public RestaurantDetailDto findById(Long id) {
+	@org.springframework.cache.annotation.Cacheable(cacheNames = "restaurantReads")
+    public RestaurantDetailDto findById(Long id) {
 		Restaurant restaurant = restaurantRepository.findByIdAndStatus(id, RestaurantStatus.PUBLISHED)
 			.orElseThrow(() -> ResourceNotFoundException.of("Restaurant", id));
 
 		RatingSummary rating = reviewRepository.findRatingSummary(id).orElseGet(() -> RatingSummary.empty(id));
-		return mapper.toDetail(restaurant, rating);
+		if (!dataProperties.includeSeed() && restaurant.getSource() == RestaurantSource.SEED) {
+            throw ResourceNotFoundException.of("Restaurant", id);
+        }
+        return mapper.toDetail(restaurant, rating);
 	}
 
 	/**
@@ -140,24 +166,17 @@ public class RestaurantService {
 	 * <p>Capped at {@link #MAX_MAP_RESULTS}; the response reports the true total so the
 	 * UI can tell the user to zoom in instead of quietly showing a subset.
 	 */
-	public MapRestaurantsDto findInBounds(MapBounds bounds) {
-		List<Restaurant> restaurants = restaurantRepository.findWithinBoundingBox(
-			bounds.minLon(), bounds.minLat(), bounds.maxLon(), bounds.maxLat(), MAX_MAP_RESULTS);
-
-		long total = restaurantRepository.countWithinBoundingBox(
-			bounds.minLon(), bounds.minLat(), bounds.maxLon(), bounds.maxLat());
-
-		Map<Long, RatingSummary> ratings = loadRatings(restaurants);
-		List<RestaurantSummaryDto> summaries = restaurants.stream()
-			.map(restaurant -> mapper.toSummary(restaurant, ratingFor(ratings, restaurant)))
-			.toList();
-
-		return new MapRestaurantsDto(summaries, total, total > summaries.size());
-	}
+    @org.springframework.cache.annotation.Cacheable(cacheNames = "restaurantReads")
+    public MapRestaurantsDto findInBounds(MapBounds bounds, RestaurantSearchCriteria criteria) {
+        var matches = reads.map(bounds, criteria, MAX_MAP_RESULTS, dataProperties.includeSeed());
+        var summaries = summaries(matches);
+        return new MapRestaurantsDto(summaries, matches.total(), matches.total() > summaries.size());
+    }
 
 	/** A handful of well-rated restaurants for the homepage. */
-	public List<RestaurantSummaryDto> findFeatured(int limit) {
-		List<Restaurant> restaurants = restaurantRepository.findFeatured(PageRequest.of(0, limit));
+	@org.springframework.cache.annotation.Cacheable(cacheNames = "restaurantReads")
+    public List<RestaurantSummaryDto> findFeatured(int limit) {
+		List<Restaurant> restaurants = restaurantRepository.findFeatured(dataProperties.includeSeed(), PageRequest.of(0, limit));
 		Map<Long, RatingSummary> ratings = loadRatings(restaurants);
 
 		return restaurants.stream()

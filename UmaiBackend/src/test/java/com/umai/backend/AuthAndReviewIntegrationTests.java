@@ -24,6 +24,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 @PostgisIntegrationTest
 @AutoConfigureMockMvc
+@org.springframework.transaction.annotation.Transactional
 class AuthAndReviewIntegrationTests extends AbstractPostgisIntegrationTest {
 
 	@Autowired

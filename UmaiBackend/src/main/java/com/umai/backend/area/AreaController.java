@@ -20,6 +20,7 @@ public class AreaController {
 		this.areaRepository = areaRepository;
 	}
 
+    @org.springframework.cache.annotation.Cacheable(cacheNames = "referenceData", key = "'area'")
 	@GetMapping
 	@Operation(summary = "エリア一覧", description = "表示順に並べた東京のエリアを返します。")
 	public List<AreaDto> list() {

@@ -35,8 +35,10 @@ public class ImportJobService {
 	private final Map<String, ImportJob> jobs = new ConcurrentHashMap<>();
 
 	private final RestaurantImportService importService;
+    private final org.springframework.core.task.TaskExecutor executor;
 
-	public ImportJobService(RestaurantImportService importService) {
+	public ImportJobService(RestaurantImportService importService, @org.springframework.beans.factory.annotation.Qualifier("applicationTaskExecutor") org.springframework.core.task.TaskExecutor executor) {
+        this.executor = executor;
 		this.importService = importService;
 	}
 
@@ -48,7 +50,7 @@ public class ImportJobService {
 		evictOldestIfFull();
 		jobs.put(id, job);
 
-		runAsync(id, source, bounds, limit);
+		executor.execute(() -> runAsync(id, source, bounds, limit));
 		return job;
 	}
 
@@ -56,7 +58,6 @@ public class ImportJobService {
 		return Optional.ofNullable(jobs.get(id));
 	}
 
-	@Async
 	void runAsync(String id, String source, MapBounds bounds, int limit) {
 		try {
 			ImportResult result = importService.importFrom(source, bounds, limit);

@@ -69,6 +69,12 @@ describe('searchRestaurants', () => {
 })
 
 describe('fetchRestaurantsInBounds', () => {
+  it('sends dietary and cuisine filters for filtering before the server limit', async () => {
+    const fetchMock = mockFetch()
+    await fetchRestaurantsInBounds({ minLat: 35.6, minLon: 139.6, maxLat: 35.8, maxLon: 139.9, vegetarianTypes: ['VEGAN_ONLY'], categories: ['cafe'] })
+    expect(requestedUrl(fetchMock)).toContain('vegetarianTypes=VEGAN_ONLY')
+    expect(requestedUrl(fetchMock)).toContain('categories=cafe')
+  })
   it('sends all four bounding-box edges', async () => {
     const fetchMock = mockFetch()
 

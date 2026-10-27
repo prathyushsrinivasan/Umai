@@ -12,7 +12,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
  * output evolves.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
-public record OverpassResponse(List<Element> elements) {
+public record OverpassResponse(List<Element> elements, String remark) {
 
 	public OverpassResponse {
 		elements = elements == null ? List.of() : elements;

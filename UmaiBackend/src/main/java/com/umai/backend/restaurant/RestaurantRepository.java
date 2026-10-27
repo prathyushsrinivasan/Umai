@@ -31,6 +31,12 @@ public interface RestaurantRepository extends JpaRepository<Restaurant, Long>, J
 	@EntityGraph(attributePaths = "area")
 	Page<Restaurant> findAll(Specification<Restaurant> spec, Pageable pageable);
 
+    @EntityGraph(attributePaths = "area")
+    List<Restaurant> findByIdIn(java.util.Collection<Long> ids);
+
+    @Query("select r from Restaurant r where r.status = com.umai.backend.restaurant.RestaurantStatus.PUBLISHED and r.source <> com.umai.backend.restaurant.RestaurantSource.SEED and r.googleEnriched = false and (r.googleRetryAfter is null or r.googleRetryAfter <= :now) order by r.id")
+    List<Restaurant> findGoogleTargets(@Param("now") java.time.Instant now, Pageable pageable);
+
 	/** Publicly visible restaurants only. */
 	Page<Restaurant> findByStatus(RestaurantStatus status, Pageable pageable);
 
@@ -44,7 +50,8 @@ public interface RestaurantRepository extends JpaRepository<Restaurant, Long>, J
 	/** Published restaurants the Google enrichment job hasn't processed yet. */
 	Page<Restaurant> findByStatusAndGoogleEnrichedFalse(RestaurantStatus status, Pageable pageable);
 
-	long countByStatusAndGoogleEnrichedFalse(RestaurantStatus status);
+	@Query("select count(r) from Restaurant r where r.status=:status and r.source <> com.umai.backend.restaurant.RestaurantSource.SEED and r.googleEnriched=false")
+    long countByStatusAndGoogleEnrichedFalse(@Param("status") RestaurantStatus status);
 
 	/** Used on re-import to update an existing record rather than duplicate it. */
 	Optional<Restaurant> findBySourceAndSourceExternalId(RestaurantSource source, String sourceExternalId);
@@ -94,9 +101,10 @@ public interface RestaurantRepository extends JpaRepository<Restaurant, Long>, J
 			select r from Restaurant r
 			left join Review rev on rev.restaurant = r
 			where r.status = com.umai.backend.restaurant.RestaurantStatus.PUBLISHED
+            and (:includeSeed = true or r.source <> com.umai.backend.restaurant.RestaurantSource.SEED)
 			group by r
 			order by coalesce(avg(rev.rating), 0) desc, count(rev) desc, r.id asc
 			""")
-	List<Restaurant> findFeatured(Pageable pageable);
+	List<Restaurant> findFeatured(@Param("includeSeed") boolean includeSeed, Pageable pageable);
 
 }

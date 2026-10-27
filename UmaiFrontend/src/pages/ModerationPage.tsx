@@ -9,6 +9,7 @@ import {
   rejectRestaurant,
   type RestaurantStatus,
 } from '../api/moderation'
+import { ReportsModeration, RestaurantEditor } from '../components/restaurant/ReportsModeration'
 import { Chip } from '../components/ui/Chip'
 import { EmptyState, ErrorState, LoadingState } from '../components/ui/States'
 import { useAsync } from '../hooks/useAsync'
@@ -28,15 +29,17 @@ const TABS: Array<{ status: RestaurantStatus; label: string }> = [
  * unusable setting rather than a safer one.
  */
 export function ModerationPage() {
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [page, setPage] = useState(0)
   const [status, setStatus] = useState<RestaurantStatus>('PENDING')
   const [reloadToken, setReloadToken] = useState(0)
   const [actioningId, setActioningId] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(
-    (signal: AbortSignal) => fetchModerationQueue(status, 0, signal),
+    (signal: AbortSignal) => fetchModerationQueue(status, page, signal),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [status, reloadToken],
+    [status, reloadToken, page],
   )
   const queue = useAsync(load)
 
@@ -66,7 +69,7 @@ export function ModerationPage() {
             key={tab.status}
             label={tab.label}
             selected={status === tab.status}
-            onClick={() => setStatus(tab.status)}
+            onClick={() => { setStatus(tab.status); setPage(0) }}
           />
         ))}
       </div>
@@ -92,6 +95,7 @@ export function ModerationPage() {
           />
         )}
 
+        {editingId !== null && <RestaurantEditor id={editingId} onSaved={() => { setEditingId(null); setReloadToken(t => t + 1) }} onCancel={() => setEditingId(null)} />}
         <ul className="space-y-3">
           <AnimatePresence initial={false}>
             {queue.data?.content.map((restaurant) => (
@@ -111,6 +115,7 @@ export function ModerationPage() {
                       {VEGETARIAN_TYPE_LABELS[restaurant.vegetarianType]}
                     </span>
 
+                    <button type="button" className="mt-2 text-sm text-leaf-700 underline" onClick={() => setEditingId(restaurant.id)}>情報を編集 / Edit details</button>
                     <h2 className="mt-2 font-bold text-bark-800">
                       <Link
                         to={`/restaurants/${restaurant.id}`}
@@ -158,6 +163,8 @@ export function ModerationPage() {
           </AnimatePresence>
         </ul>
       </div>
+      {queue.data && queue.data.totalPages > 1 && <div className="mt-4 flex gap-4"><button disabled={page === 0} onClick={() => setPage(p => p - 1)}>前へ / Previous</button><span>{page + 1} / {queue.data.totalPages}</span><button disabled={queue.data.last} onClick={() => setPage(p => p + 1)}>次へ / Next</button></div>}
+      <ReportsModeration />
     </div>
   )
 }

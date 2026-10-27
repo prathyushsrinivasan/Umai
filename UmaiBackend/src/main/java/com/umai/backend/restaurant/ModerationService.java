@@ -44,11 +44,13 @@ public class ModerationService {
 	}
 
 	@Transactional
+    @org.springframework.cache.annotation.CacheEvict(cacheNames = "restaurantReads", allEntries = true)
 	public RestaurantDetailDto approve(Long id) {
 		return transition(id, RestaurantStatus.PUBLISHED);
 	}
 
 	@Transactional
+    @org.springframework.cache.annotation.CacheEvict(cacheNames = "restaurantReads", allEntries = true)
 	public RestaurantDetailDto reject(Long id) {
 		return transition(id, RestaurantStatus.REJECTED);
 	}

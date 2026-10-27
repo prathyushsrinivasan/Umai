@@ -53,6 +53,7 @@ public class ReviewService {
 	}
 
 	@Transactional
+    @org.springframework.cache.annotation.CacheEvict(cacheNames = "restaurantReads", allEntries = true)
 	public ReviewDto create(Long restaurantId, ReviewRequest request) {
 		Restaurant restaurant = requirePublishedRestaurant(restaurantId);
 		Long userId = CurrentUser.requireId();
@@ -69,6 +70,7 @@ public class ReviewService {
 	}
 
 	@Transactional
+    @org.springframework.cache.annotation.CacheEvict(cacheNames = "restaurantReads", allEntries = true)
 	public ReviewDto update(Long restaurantId, Long reviewId, ReviewRequest request) {
 		Review review = requireOwnReview(restaurantId, reviewId);
 
@@ -79,6 +81,7 @@ public class ReviewService {
 	}
 
 	@Transactional
+    @org.springframework.cache.annotation.CacheEvict(cacheNames = "restaurantReads", allEntries = true)
 	public void delete(Long restaurantId, Long reviewId) {
 		reviewRepository.delete(requireOwnReview(restaurantId, reviewId));
 	}
